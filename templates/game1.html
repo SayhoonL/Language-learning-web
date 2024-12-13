@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shell Game</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Shell Game</h1>
+    <p>Find the ball hidden under one of the shells!</p>
+    <p>Your Current Points: <span id="currentPoints">Loading...</span></p>
+
+    <div>
+        <label for="bet">Place Your Bet:</label>
+        <input type="number" id="bet" min="1" placeholder="Enter bet amount">
+        <button onclick="placeBet()">Start Game</button>
+    </div>
+
+    <div id="game" style="display: none;">
+        <div class="shell" onclick="checkShell(1)" id="shell1">?</div>
+        <div class="shell" onclick="checkShell(2)" id="shell2">?</div>
+        <div class="shell" onclick="checkShell(3)" id="shell3">?</div>
+    </div>
+
+    <p id="result"></p>
+    <button onclick="resetGame()">Play Again</button>
+    <a href="/">Back to Dashboard</a>
+
+    <script>
+        let ballPosition = Math.floor(Math.random() * 3) + 1;  // Random position (1, 2, or 3)
+        let currentPoints = 0;  // Points fetched from the backend
+        let betAmount = 0;
+
+        // Fetch points from the backend when the page loads
+        window.onload = function() {
+            fetch('/get_points', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.points !== undefined) {
+                    currentPoints = data.points;  // Set points from backend
+                    document.getElementById('currentPoints').textContent = currentPoints;
+                } else {
+                    alert(data.error || 'Error fetching points.');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching points:', error);
+                alert('An error occurred while fetching points.');
+            });
+        };
+
+        function placeBet() {
+            const betInput = document.getElementById('bet');
+            betAmount = Number(betInput.value);
+
+            if (betAmount <= 0 || betAmount > currentPoints) {
+                alert('Invalid bet amount. Please enter a valid number.');
+                return;
+            }
+
+            // Deduct bet amount temporarily
+            currentPoints -= betAmount;
+            document.getElementById('currentPoints').textContent = currentPoints;
+
+            // Show the game
+            document.getElementById('game').style.display = 'flex';
+            document.getElementById('result').textContent = '';  // Clear result
+            ballPosition = Math.floor(Math.random() * 3) + 1;  // Reset random position
+        }
+
+        function checkShell(shellNumber) {
+            const result = document.getElementById('result');
+
+            if (shellNumber === ballPosition) {
+                const winnings = betAmount * 2;
+                currentPoints += winnings;
+                result.textContent = `🎉 Correct! You won ${winnings} points!`;
+                result.style.color = 'green';
+            } else {
+                result.textContent = `❌ Wrong! You lost ${betAmount} points.`;
+                result.style.color = 'red';
+            }
+
+            // Reveal the correct position
+            document.getElementById(`shell${ballPosition}`).textContent = '🎾';
+            document.getElementById('currentPoints').textContent = currentPoints;
+
+            // Disable further clicks
+            disableShells();
+
+            // Update points in the backend
+            updatePoints();
+        }
+
+        function resetGame() {
+            // Reset the game state
+            document.getElementById('bet').value = '';
+            document.getElementById('result').textContent = '';
+
+            // Reset all shells
+            for (let i = 1; i <= 3; i++) {
+                const shell = document.getElementById(`shell${i}`);
+                shell.textContent = '?';  // Reset shell content
+                shell.onclick = () => checkShell(i);  // Re-enable click handler
+            }
+
+            // Generate a new random ball position
+            ballPosition = Math.floor(Math.random() * 3) + 1;
+        }
+
+        function disableShells() {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`shell${i}`).onclick = null;
+            }
+        }
+
+        function updatePoints() {
+            fetch('/update_points', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points: currentPoints })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Failed to update points on the server.');
+                } else {
+                    console.log('Points successfully updated on the backend:', currentPoints);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating points:', error);
+                alert('An error occurred while updating points.');
+            });
+        }
+
+    </script>
+</body>
+</html>

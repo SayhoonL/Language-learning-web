@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <h1>Welcome, {{ username }}</h1>
+    <p>hello</p>
+    <p>{{ username }} has {{ points }} points.</p>
+
+    <!-- Button to go to Game 1 -->
+    <button onclick="window.location.href='/logout';">logout</button>
+
+    <!-- Optional: Add a hyperlink instead -->
+    <p><a href="/game1">Play Game 1</a></p>
+</body>
+</html>
