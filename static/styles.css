@@ -66,3 +66,45 @@ a {
 a:hover {
     color: #0056b3;
 }
+
+#game {
+    padding: 20px;
+}
+
+.cards {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.card {
+    width: 50px;
+    height: 80px;
+    border: 1px solid #ecf0f1;
+    margin: 5px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #34495e;
+    color: #ecf0f1;
+}
+
+.hidden {
+    background-color: #7f8c8d;
+    color: #7f8c8d;
+}
+
+#controls button {
+    margin: 10px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#result {
+    margin-top: 20px;
+    font-size: 24px;
+    color: #e74c3c; /* Red color for results */
+    text-align: center;
+    font-weight: bold;
+}

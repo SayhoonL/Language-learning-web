@@ -84,6 +84,12 @@ def game1():
         return redirect(url_for('login'))
     return render_template('game1.html')
 
+@app.route('/game2')
+def game2():
+    if not is_logged_in():
+        return redirect(url_for('login'))
+    return render_template('game2.html')
+
 @app.route('/get_points', methods=['GET'])
 def get_points():
     username = session.get('username')  # Get the logged-in user's username

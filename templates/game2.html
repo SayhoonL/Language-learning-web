@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blackjack Game</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="game">
+        <h1>Blackjack</h1>
+        <div id="house">
+            <h2>House</h2>
+            <div id="house-cards" class="cards"></div>
+            <p>Score: <span id="house-score">0</span></p>
+        </div>
+        <div id="player">
+            <h2>You</h2>
+            <div id="player-cards" class="cards"></div>
+            <p>Score: <span id="player-score">0</span></p>
+        </div>
+        <div id="controls">
+            <button id="hit">Hit</button>
+            <button id="stand">Stand</button>
+            <button id="restart">Restart</button>
+        </div>
+        <div id="result"></div>
+    </div>
+    <script>
+        class Card {
+            constructor(rank, suit, faceUp = true) {
+                this.rank = rank;
+                this.suit = suit;
+                this.faceUp = faceUp;
+            }
+
+            getRankString() {
+                if (this.rank === 11) return "J";
+                if (this.rank === 12) return "Q";
+                if (this.rank === 13) return "K";
+                if (this.rank === 14) return "A";
+                return this.rank.toString();
+            }
+
+            getSuitString() {
+                return ["♣", "♦", "♥", "♠"][this.suit];
+            }
+
+            toString() {
+                return this.faceUp ? `${this.getRankString()}${this.getSuitString()}` : "❓";
+            }
+        }
+
+        class Deck {
+            constructor() {
+                this.cards = [];
+                for (let rank = 2; rank <= 14; rank++) {
+                    for (let suit = 0; suit < 4; suit++) {
+                        this.cards.push(new Card(rank, suit));
+                    }
+                }
+                this.shuffle();
+            }
+
+            shuffle() {
+                for (let i = this.cards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.cards[i], this.cards[j]] = [this.cards[j], this.cards[i]];
+                }
+            }
+
+            draw() {
+                return this.cards.pop();
+            }
+        }
+
+        class BlackjackGame {
+            constructor() {
+                this.deck = new Deck();
+                this.houseCards = [];
+                this.playerCards = [];
+                this.houseDone = false;
+                this.playerDone = false;
+                this.init();
+            }
+
+            init() {
+                document.getElementById("hit").addEventListener("click", () => this.playerHit());
+                document.getElementById("stand").addEventListener("click", () => this.playerStand());
+                document.getElementById("restart").addEventListener("click", () => this.restart());
+                this.start();
+            }
+
+            start() {
+                this.houseCards = [this.deck.draw(), this.deck.draw()];
+                this.houseCards[0].faceUp = false;
+
+                this.playerCards = [this.deck.draw(), this.deck.draw()];
+                this.updateUI();
+            }
+
+            score(cards) {
+                let score = 0;
+                let aces = 0;
+
+                cards.forEach(card => {
+                    if (card.rank >= 11 && card.rank <= 13) {
+                        score += 10;
+                    } else if (card.rank === 14) {
+                        score += 11;
+                        aces++;
+                    } else {
+                        score += card.rank;
+                    }
+                });
+
+                while (score > 21 && aces > 0) {
+                    score -= 10;
+                    aces--;
+                }
+
+                return score;
+            }
+
+            updateUI() {
+                this.renderCards("house-cards", this.houseCards);
+                this.renderCards("player-cards", this.playerCards);
+
+                document.getElementById("house-score").textContent = this.score(this.houseCards);
+                document.getElementById("player-score").textContent = this.score(this.playerCards);
+
+                if (this.playerDone && this.houseDone) {
+                    this.endGame();
+                }
+            }
+
+            renderCards(containerId, cards) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = "";
+                cards.forEach(card => {
+                    const div = document.createElement("div");
+                    div.className = "card" + (card.faceUp ? "" : " hidden");
+                    div.textContent = card.toString();
+                    container.appendChild(div);
+                });
+            }
+
+            playerHit() {
+                if (!this.playerDone) {
+                    this.playerCards.push(this.deck.draw());
+                    if (this.score(this.playerCards) > 21) {
+                        this.playerDone = true;
+                    }
+                    this.updateUI();
+                }
+            }
+
+            playerStand() {
+                this.playerDone = true;
+                while (this.score(this.houseCards) < 17) {
+                    this.houseCards.push(this.deck.draw());
+                }
+                this.houseDone = true;
+                this.updateUI();
+            }
+
+            restart() {
+                location.reload();
+            }
+
+            endGame() {
+                this.houseCards[0].faceUp = true;
+                this.updateUI();
+
+                const playerScore = this.score(this.playerCards);
+                const houseScore = this.score(this.houseCards);
+                const result = document.getElementById("result");
+
+                if (playerScore > 21) {
+                    result.textContent = "You lose!";
+                } else if (houseScore > 21 || playerScore > houseScore) {
+                    result.textContent = "You win!";
+                } else if (playerScore < houseScore) {
+                    result.textContent = "You lose!";
+                } else {
+                    result.textContent = "It's a tie!";
+                }
+            }}
+
+        document.addEventListener("DOMContentLoaded", () => new BlackjackGame());
+
+    </script>
+</body>
+</html>
