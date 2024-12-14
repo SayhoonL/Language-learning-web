@@ -126,11 +126,15 @@
                 this.renderCards("house-cards", this.houseCards);
                 this.renderCards("player-cards", this.playerCards);
 
-                document.getElementById("house-score").textContent = this.score(this.houseCards);
+                // Update house score only if player is done
+                const houseScoreElement = document.getElementById("house-score");
+                houseScoreElement.textContent = this.houseDone ? this.score(this.houseCards) : "❓";
+
+                // Always show the player's score
                 document.getElementById("player-score").textContent = this.score(this.playerCards);
 
                 if (this.playerDone && this.houseDone) {
-                    console.log("Calling endGame()");
+                    
                     this.endGame();
                 }
             }
@@ -158,7 +162,6 @@
             }
 
             playerStand() {
-                this.playerDone = true;
                 while (this.score(this.houseCards) < 17) {
                     this.houseCards.push(this.deck.draw());
                 }
@@ -166,6 +169,7 @@
                 this.updateUI();
                 this.endGame();
             }
+
 
             restart() {
                 location.reload();
