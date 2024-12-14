@@ -104,7 +104,9 @@ a:hover {
 #result {
     margin-top: 20px;
     font-size: 24px;
-    color: #e74c3c; /* Red color for results */
+    color: #e74c3c; 
     text-align: center;
     font-weight: bold;
+    background-color: yellow;
+    border: 1px solid black;
 }

@@ -130,6 +130,7 @@
                 document.getElementById("player-score").textContent = this.score(this.playerCards);
 
                 if (this.playerDone && this.houseDone) {
+                    console.log("Calling endGame()");
                     this.endGame();
                 }
             }
@@ -150,6 +151,7 @@
                     this.playerCards.push(this.deck.draw());
                     if (this.score(this.playerCards) > 21) {
                         this.playerDone = true;
+                        this.endGame();
                     }
                     this.updateUI();
                 }
@@ -162,6 +164,7 @@
                 }
                 this.houseDone = true;
                 this.updateUI();
+                this.endGame();
             }
 
             restart() {
@@ -169,23 +172,27 @@
             }
 
             endGame() {
-                this.houseCards[0].faceUp = true;
-                this.updateUI();
+                this.houseCards[0].faceUp = true; // Reveal the house's first card
+                this.updateUI(); // Update the UI to reflect all cards
 
                 const playerScore = this.score(this.playerCards);
                 const houseScore = this.score(this.houseCards);
                 const result = document.getElementById("result");
 
                 if (playerScore > 21) {
-                    result.textContent = "You lose!";
-                } else if (houseScore > 21 || playerScore > houseScore) {
+                    result.textContent = "You lose! Bust!";
+                } else if (houseScore > 21) {
+                    result.textContent = "You win! House busted!";
+                } else if (playerScore > houseScore) {
                     result.textContent = "You win!";
                 } else if (playerScore < houseScore) {
                     result.textContent = "You lose!";
                 } else {
                     result.textContent = "It's a tie!";
                 }
-            }}
+            }
+
+        }
 
         document.addEventListener("DOMContentLoaded", () => new BlackjackGame());
 

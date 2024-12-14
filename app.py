@@ -69,7 +69,7 @@ def signup():
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
         try:
-            c.execute("INSERT INTO users (username, password, points) VALUES (?, ?, ?)", (username, password, 0))
+            c.execute("INSERT INTO users (username, password, points) VALUES (?, ?, ?)", (username, password, 100))
             conn.commit()
         except sqlite3.IntegrityError:
             return "Username already exists"
