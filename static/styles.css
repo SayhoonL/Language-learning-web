@@ -1,7 +1,7 @@
 body {
-    font-family: Arial, sans-serif;
-    text-align: center;
-    margin-top: 50px;
+    font-family: 'Arial', sans-serif; /* Arial is a common sans-serif font */
+    font-size: 16px; /* Default font size for the body */
+    text-align: center; /* Optional: center align the text */
 }
 
 h1 {
@@ -108,5 +108,4 @@ a:hover {
     text-align: center;
     font-weight: bold;
     background-color: yellow;
-    border: 1px solid black;
 }

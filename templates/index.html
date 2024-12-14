@@ -5,16 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/styles/index.css"> <!-- Link to the new index.css -->
 </head>
 <body>
-    <h1>Welcome, {{ username }}</h1>
-    <p>{{ username }} has {{ points }} points.</p>
+    <h1>{{ username }} has {{ points }} points.</h1>
 
-    <!-- Button to go to Game 1 -->
-    <button onclick="window.location.href='/logout';">logout</button>
+    <!-- Wrapper for username and logout button -->
+    <div class="header">
+        <button onclick="window.location.href='/logout';">Logout</button> <!-- Logout button -->
+    </div>
 
-    <!-- Optional: Add a hyperlink instead -->
-    <p><a href="/game1">Play Game 1</a></p>
-    <p><a href="/game2">Play Game 2</a></p>
+    <!-- Game links with images displayed horizontally in the center -->
+    <div class="game-links">
+        <a href="/game1">
+            <img src="/static/uploads/image1.jpg" alt="Game 1">
+        </a>
+        <a href="/game2">
+            <img src="/static/uploads/image2.jpg" alt="Game 2">
+        </a>
+        <a href="/game3">
+            <img src="/static/uploads/image3.jpg" alt="Game 3">
+        </a>
+    </div>
 </body>
 </html>
+
+
+
+
