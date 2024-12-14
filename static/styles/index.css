@@ -1,0 +1,73 @@
+/* index.css */
+
+/* Use Playfair Display for display text */
+body {
+    font-family: 'Playfair Display', serif; /* Display font */
+    font-size: 16px;
+    text-align: center;
+    margin: 0;
+    padding: 0;
+    background-color: #585757; /* Light gray background */
+    color: #000000;            /* Dark text color */
+    transition: background-color 0.3s, color 0.3s; /* Smooth transition */
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;  /* This will place the username on the left and logout on the right */
+    align-items: center;            /* Vertically center the elements */
+    width: 100%;                    /* Make the header span the full width of the page */
+    padding: 10px 20px;             /* Add padding to the header */
+    box-sizing: border-box;         /* Ensure padding doesn't affect width */
+}
+
+.header p {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    margin-right: 20px;
+}
+
+p {
+    font-family: 'Helvetica', sans-serif; /* Set Helvetica for paragraphs */
+    font-size: 18px;
+}
+
+.header button {
+    font-family: 'Verdana', sans-serif;
+    font-size: 14px;
+    padding: 8px 16px;
+}
+
+/* Title */
+h1 {
+    font-family: 'Arial', sans-serif; /* Set sans-serif font for h1 */
+    font-size: 36px;
+}
+
+/* Game links section */
+.game-links {
+    display: flex;
+    justify-content: center;
+    gap: 100px;
+    margin-top: 100px;
+}
+
+/* Game link image styling */
+.game-links img {
+    width: 250px;
+    height: auto;
+    border-radius: 10px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s;
+}
+
+.game-links img:hover {
+    transform: scale(1.1);
+}
+
+/* Log out button on top-right */
+button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+}

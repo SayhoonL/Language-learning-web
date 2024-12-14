@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mining Clicker Game</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+
+        h1 {
+            font-size: 36px;
+            color: #333;
+        }
+
+        button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            border: none;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #upgrades button {
+            background-color: #008CBA;
+        }
+
+        #upgrades button:hover {
+            background-color: #007bb5;
+        }
+
+        #pointsDisplay {
+            font-size: 20px;
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+    <h1>⛏️⛏️⛏️ Mining Clicker Game</h1>
+    
+    <!-- Display resources and stats -->
+    <p>Your Current Points: <span id="gamePointsDisplay">Loading...</span></p>
+    <p>Ore: <span id="oreAmount">0</span></p>
+    <p>Mining Power: <span id="miningPower">1</span></p>
+    
+    <!-- Mine Button -->
+    <button id="mineButton">Mine</button>
+
+    <!-- Button to add points -->
+    <button id="addPointsButton">Add Points</button> <!-- New button for adding points -->
+
+    <!-- Available upgrades -->
+    <div id="upgrades">
+        <button id="upgrade1" onclick="purchaseUpgrade(1)">Upgrade Mining Power (Cost: 10 ore)</button>
+    </div>
+    <a href="/">Back to Dashboard</a>
+    <script>
+        let orePoints = 0;  // The amount of ore the player has
+        let miningPower = 1;  // Initial mining power (how much ore is mined per click)
+        let upgradeCost = 10;  // The cost of the first upgrade
+        let gamePoints = 0;  // Initialize game points to 0
+        
+        // Fetch points from the server when the page loads
+        window.onload = function() {
+            fetch('/get_points', {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.points !== undefined) {
+                    gamePoints = data.points;  // Set points from backend
+                    document.getElementById('gamePointsDisplay').textContent = gamePoints;
+                } else {
+                    alert(data.error || 'Error fetching points.');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching points:', error);
+                alert('An error occurred while fetching points.');
+            });
+        };
+
+        // Update the display of ore, mining power, and points
+        function updateDisplay() {
+            document.getElementById('oreAmount').textContent = orePoints;
+            document.getElementById('gamePointsDisplay').textContent = gamePoints;  // Update gamePoints display
+            document.getElementById('miningPower').textContent = miningPower;
+        }
+
+        // Mine function (when the player clicks the "Mine" button)
+        document.getElementById('mineButton').addEventListener('click', function() {
+            orePoints += miningPower;  // Increase ore by the mining power amount
+            updateDisplay();  // Update the display
+        });
+
+        // Add points function (when the player clicks the "Add Points" button)
+        document.getElementById('addPointsButton').addEventListener('click', function() {
+            gamePoints += orePoints;
+            orePoints = 0;
+            updateDisplay();  // Update the display
+            updatePoints();  // Update points on the server
+        });
+
+        // Purchase upgrade function (for upgrading mining power)
+        function purchaseUpgrade(upgradeNumber) {
+            if (upgradeNumber === 1 && orePoints >= upgradeCost) {
+                orePoints -= upgradeCost;  // Deduct ore for the upgrade
+                miningPower += 1;    // Increase mining power
+                upgradeCost = Math.floor(upgradeCost * 1.5);  // Increase cost for next upgrade
+                alert("Upgrade purchased! Mining power increased!");
+                updateDisplay();  // Update the display
+                document.getElementById('upgrade1').textContent = `Upgrade Mining Power (Cost: ${upgradeCost} ore)`;
+            } else {
+                alert("Not enough ore for upgrade!");
+            }
+        }
+
+        // Update points on the server (send the updated points to the backend)
+        function updatePoints() {
+            fetch('/update_points', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ points: gamePoints })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Failed to update points on the server.');
+                } else {
+                    console.log('Points successfully updated on the backend:', gamePoints);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating points:', error);
+                alert('An error occurred while updating points.');
+            });
+        }
+    </script>
+</body>
+</html>

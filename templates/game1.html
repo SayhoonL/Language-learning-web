@@ -11,10 +11,15 @@
     <p>Find the ball hidden under one of the shells!</p>
     <p>Your Current Points: <span id="currentPoints">Loading...</span></p>
 
-    <div>
+    <div id ="beginning" style="display: none;">
         <label for="bet">Place Your Bet:</label>
         <input type="number" id="bet" min="1" placeholder="Enter bet amount">
-        <button onclick="placeBet()">Start Game</button>
+        <button id="betbutton" onclick="placeBet()">BET</button>
+        
+    </div>
+    <p id="hide" style="display: none;">You bet <span id="betAmountDisplay"></span>!</p>
+    <div id="startGameButton">
+        <button onclick="startgame()">Start Game</button>
     </div>
 
     <div id="game" style="display: none;">
@@ -24,14 +29,16 @@
     </div>
 
     <p id="result"></p>
-    <button onclick="resetGame()">Play Again</button>
+    <div id="playAgainButton" style="display: none;">
+        <button onclick="resetGame()">Play Again</button>
+    </div>
     <a href="/">Back to Dashboard</a>
 
     <script>
         let ballPosition = Math.floor(Math.random() * 3) + 1;  // Random position (1, 2, or 3)
         let currentPoints = 0;  // Points fetched from the backend
         let betAmount = 0;
-
+        disableShells()
         // Fetch points from the backend when the page loads
         window.onload = function() {
             fetch('/get_points', {
@@ -52,31 +59,37 @@
                 alert('An error occurred while fetching points.');
             });
         };
+        function startgame(){
+            document.getElementById('startGameButton').style.display = 'none';
+            document.getElementById('game').style.display = 'flex';
+            document.getElementById('result').textContent = ''; 
+            document.getElementById('beginning').style.display = 'inline-block';
+            ballPosition = Math.floor(Math.random() * 3) + 1; 
+
+        }
 
         function placeBet() {
             const betInput = document.getElementById('bet');
             betAmount = Number(betInput.value);
-
+            activateShells()
             if (betAmount <= 0 || betAmount > currentPoints) {
                 alert('Invalid bet amount. Please enter a valid number.');
                 return;
             }
 
-            // Deduct bet amount temporarily
+            document.getElementById('betAmountDisplay').textContent = betAmount;
+
+            // Show the paragraph
+            document.getElementById('hide').style.display = 'block';
+
             currentPoints -= betAmount;
             document.getElementById('currentPoints').textContent = currentPoints;
-
-            // Show the game
-            document.getElementById('game').style.display = 'flex';
-            document.getElementById('result').textContent = '';  // Clear result
-            ballPosition = Math.floor(Math.random() * 3) + 1;  // Reset random position
         }
 
         function checkShell(shellNumber) {
             const result = document.getElementById('result');
-
             if (shellNumber === ballPosition) {
-                const winnings = betAmount * 2;
+                const winnings = betAmount * 3;
                 currentPoints += winnings;
                 result.textContent = `🎉 Correct! You won ${winnings} points!`;
                 result.style.color = 'green';
@@ -89,9 +102,10 @@
             document.getElementById(`shell${ballPosition}`).textContent = '🎾';
             document.getElementById('currentPoints').textContent = currentPoints;
 
-            // Disable further clicks
+            document.getElementById(`betbutton`).onclick = null;
             disableShells();
-
+            document.getElementById('playAgainButton').style.display = 'inline-block';
+            document.getElementById('hide').style.display = 'none';
             // Update points in the backend
             updatePoints();
         }
@@ -100,12 +114,12 @@
             // Reset the game state
             document.getElementById('bet').value = '';
             document.getElementById('result').textContent = '';
-
+            betAmount = 0;
+            document.getElementById('betbutton').onclick = function() {placeBet()};
             // Reset all shells
             for (let i = 1; i <= 3; i++) {
                 const shell = document.getElementById(`shell${i}`);
                 shell.textContent = '?';  // Reset shell content
-                shell.onclick = () => checkShell(i);  // Re-enable click handler
             }
 
             // Generate a new random ball position
@@ -115,6 +129,12 @@
         function disableShells() {
             for (let i = 1; i <= 3; i++) {
                 document.getElementById(`shell${i}`).onclick = null;
+            }
+        }
+
+        function activateShells() {
+            for (let i = 1; i <= 3; i++) {
+                document.getElementById(`shell${i}`).onclick = function() { checkShell(i) };
             }
         }
 
