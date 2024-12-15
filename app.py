@@ -5,7 +5,7 @@ from datetime import timedelta
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Session expires after 30 seconds for testing
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Session expires after 30 minutes
 
 # Database setup
 def init_db():
@@ -15,7 +15,8 @@ def init_db():
                     id INTEGER PRIMARY KEY,
                     username TEXT UNIQUE NOT NULL,
                     password TEXT NOT NULL,
-                    points INTEGER DEFAULT 0
+                    points INTEGER DEFAULT 0,
+                    levels INTEGER DEFAULT 1
                 )''')
     conn.commit()
     conn.close()
@@ -69,7 +70,7 @@ def signup():
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
         try:
-            c.execute("INSERT INTO users (username, password, points) VALUES (?, ?, ?)", (username, password, 100))
+            c.execute("INSERT INTO users (username, password, points, levels) VALUES (?, ?, ?, ?)", (username, password, 100, 1))
             conn.commit()
         except sqlite3.IntegrityError:
             return "Username already exists"
@@ -77,6 +78,12 @@ def signup():
             conn.close()
         return redirect(url_for('login'))
     return render_template('signup.html')
+
+@app.route('/lobby')
+def lobby():
+    if not is_logged_in():
+        return redirect(url_for('login'))
+    return render_template('lobby.html')
 
 @app.route('/game1')
 def game1():
@@ -96,37 +103,38 @@ def game3():
         return redirect(url_for('login'))
     return render_template('game3.html')
 
-
-@app.route('/get_points', methods=['GET'])
-def get_points():
+@app.route('/get_user_info', methods=['GET'])
+def get_user_info():
     username = session.get('username')  # Get the logged-in user's username
 
     if username:
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
-        c.execute("SELECT points FROM users WHERE username = ?", (username,))
+        c.execute("SELECT points, levels FROM users WHERE username = ?", (username,))
         row = c.fetchone()
         conn.close()
 
         if row:
-            return {'points': row[0]}, 200  # Return points as JSON
+            return {'points': row[0], 'levels': row[1]}, 200  # Return points and levels as JSON
     return {'error': 'User not found or not logged in'}, 400
 
-
-@app.route('/update_points', methods=['POST'])
-def update_points():
+@app.route('/update_user', methods=['POST'])
+def update_user():
     username = session.get('username')  # Get the logged-in user's username
-    new_points = request.json.get('points')  # Get the new points from the request
+    new_points = request.json.get('points')  # Optional: Get the new points from the request
+    new_level = request.json.get('level')  # Optional: Get the new level from the request
 
-    if username and new_points is not None:
+    if username and (new_points is not None or new_level is not None):
         conn = sqlite3.connect('users.db')
         c = conn.cursor()
-        c.execute("UPDATE users SET points = ? WHERE username = ?", (new_points, username))
+        if new_points is not None:
+            c.execute("UPDATE users SET points = ? WHERE username = ?", (new_points, username))
+        if new_level is not None:
+            c.execute("UPDATE users SET levels = ? WHERE username = ?", (new_level, username))
         conn.commit()
         conn.close()
         return {'success': True}, 200
     return {'error': 'Invalid request'}, 400
-
 
 @app.route('/logout')
 def logout():
