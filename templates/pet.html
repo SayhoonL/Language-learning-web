@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .pet-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 30px;
+        }
+        .pet-image {
+            width: 200px;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 2px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .button {
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .back-button {
+            margin-top: 20px;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <h1>Pet Details</h1>
+    <div class="pet-container">
+        <img id="petImage" class="pet-image" alt="Pet Image">
+        <h2 id="petName"></h2>
+        <p>Experience Points: <span id="petExp">Loading...</span></p>
+        <button class="button" onclick="feedPet()">Feed</button>
+    </div>
+
+    <!-- Back to Manage Pets -->
+    <a href="/lobby" class="back-button">Back to Lobby</a>
+
+    <script>
+        const petId = new URLSearchParams(window.location.search).get('id'); // Get pet ID from URL
+
+        // Fetch pet details from the backend
+        function fetchPetDetails() {
+            fetch(`/get_pet_details?id=${petId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.pet) {
+                        document.getElementById('petImage').src = data.pet.image_url;
+                        document.getElementById('petName').textContent = data.pet.name;
+                        document.getElementById('petExp').textContent = data.pet.exp;
+                    } else {
+                        alert('Error loading pet details.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pet details:', error);
+                    alert('An error occurred while loading pet details.');
+                });
+        }
+
+        // Feed the pet to increase experience points
+        function feedPet() {
+            fetch(`/feed_pet?id=${petId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('petExp').textContent = data.newExp;
+                        alert('Your pet gained experience!');
+                    } else {
+                        alert('Error feeding pet.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error feeding pet:', error);
+                    alert('An error occurred while feeding the pet.');
+                });
+        }
+
+        // Load pet details on page load
+        window.onload = fetchPetDetails;
+    </script>
+</body>
+</html>

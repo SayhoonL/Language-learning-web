@@ -1,14 +1,32 @@
 import sqlite3
 
-def view_users():
-    conn = sqlite3.connect('users.db')
+def view_database():
+    """Displays all data from the pets_database.db."""
+    conn = sqlite3.connect('pets_database.db')
     c = conn.cursor()
-    c.execute("SELECT * FROM users")
-    users = c.fetchall()
+
+    # Fetch all table names
+    c.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = c.fetchall()
+
+    for table in tables:
+        table_name = table[0]
+        print(f"\nTable: {table_name}")
+        c.execute(f"SELECT * FROM {table_name}")
+        rows = c.fetchall()
+
+        # Fetch column names
+        c.execute(f"PRAGMA table_info({table_name});")
+        columns = [col[1] for col in c.fetchall()]
+        print(" | ".join(columns))  # Print column headers
+        print("-" * 40)
+
+        # Print rows
+        for row in rows:
+            print(row)
+
     conn.close()
 
-    for user in users:
-        print(f"ID: {user[0]}, Username: {user[1]}, Points: {user[3]}")
-
 if __name__ == "__main__":
-    view_users()
+    view_database()
+

@@ -4,71 +4,63 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pet Growth Lobby</title>
-    <link rel="stylesheet" href="/static/styles.css">
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-image: url('/static/uploads/grass.jpg'); /* Replace with your image path */
-            background-size: cover;
-            background-position: center;
+            background-color: #2c3e50;
             color: white;
             text-align: center;
             margin: 0;
-            padding: 0;
+            padding: 20px;
         }
 
-        h2 {
-            margin-top: 20px;
-        }
-
-        .progress-container {
-            width: 20%;
-            background-color: rgba(255, 255, 255, 0.7);
-            border: 1px solid #ddd;
-            border-radius: 5px;
+        .pet-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
             margin: 20px auto;
-            overflow: hidden;
         }
 
-        .progress-bar {
-            height: 20px;
-            background-color: #4caf50;
+        .pet-card {
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 10px 20px;
+            width: 300px;
             text-align: center;
-            color: white;
-            line-height: 20px;
-            border-radius: 5px;
-            transition: width 0.3s ease-in-out;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .pet-card:hover {
+            transform: scale(1.05);
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
         .pet-image {
-            display: block;
-            margin: 20px auto;
-            max-width: 150px;
-            max-height: 150px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.3);
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 50%;
+            margin-bottom: 10px;
         }
 
-        button {
+        .pet-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .pet-level {
             font-size: 16px;
-            padding: 10px 20px;
-            margin-top: 20px;
-            background-color: #4caf50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease-in-out;
-        }
-
-        button:hover {
-            background-color: #45a049;
+            margin: 5px 0;
         }
 
         a {
             display: inline-block;
             margin-top: 20px;
-            color: #fff;
+            color: #1abc9c;
             text-decoration: none;
             font-weight: bold;
         }
@@ -79,140 +71,57 @@
     </style>
 </head>
 <body>
-
-    <div>
-        <p><strong>Your Current Points:</strong> <span id="currentPoints">Loading...</span></p>
+    <h1>Welcome to the Pet Growth Lobby</h1>
+    <div class="pet-container" id="petsContainer">
+        <p>Loading your pets...</p>
     </div>
-
-    <div id="petSection">
-        <h2>Your Pet</h2>
-        <p><strong>Name:</strong> <span id="petName">Loading...</span></p>
-        <p><strong>Level:</strong> <span id="petLevel">Loading...</span></p>
-        <p><strong>Growth Cost:</strong> <span id="growthCost">10</span> Points</p>
-
-        <!-- Progress bar container -->
-        <div class="progress-container">
-            <div class="progress-bar" id="levelProgress" style="width: 0%;">0%</div>
-        </div>
-
-        <button id="growButton" onclick="growPet()">Grow Pet</button>
-    </div>
-
-    <p id="resultMessage"></p>
-    <img id="petImage" class="pet-image" src="" alt="Pet Image">
     <a href="/">Back to Dashboard</a>
 
     <script>
-        let currentPoints = 0; // Placeholder until fetched from backend
-        let petLevel = 1; // Placeholder until fetched from backend
-        const baseGrowthCost = 10; // Base cost to grow the pet
-        const maxLevel = 20; // Example maximum level for the pet
-
-        // Fetch current points and level from the combined backend endpoint
+        // Fetch the user's pets from the backend
         window.onload = function () {
-            fetch('/get_user_info', { method: 'GET' })
+            fetch('/get_user_pets', { method: 'GET' })
                 .then(response => response.json())
                 .then(data => {
-                    currentPoints = data.points || 0;
-                    petLevel = data.levels || 1;
-
-                    // Update the UI with fetched data
-                    document.getElementById('currentPoints').textContent = currentPoints;
-                    document.getElementById('petLevel').textContent = petLevel;
-                    document.getElementById('growthCost').textContent = getGrowthCost(petLevel);
-
-                    // Update pet name, image, and progress bar
-                    updatePetNameAndImage(petLevel);
-                    updateProgressBar(petLevel);
-                })
-                .catch(error => console.error('Error fetching user info:', error));
-        };
-
-        // Calculate the cost to grow the pet
-        function getGrowthCost(level) {
-            return baseGrowthCost + (level - 1) * 5; // Cost increases by 5 points per level
-        }
-
-        // Function to grow the pet
-        function growPet() {
-            const growthCost = getGrowthCost(petLevel);
-
-            if (currentPoints >= growthCost) {
-                // Deduct points and grow the pet
-                currentPoints -= growthCost;
-                petLevel = Math.min(petLevel + 1, maxLevel); // Cap the level at maxLevel
-
-                // Update points and levels on the backend
-                updateUser();
-            } else {
-                // Not enough points
-                document.getElementById('resultMessage').textContent = '❌ Not enough points to grow your pet!';
-                document.getElementById('resultMessage').style.color = 'red';
-            }
-        }
-
-        // Function to update points and levels on the backend
-        function updateUser() {
-            fetch('/update_user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ points: currentPoints, level: petLevel })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.success) {
-                        alert('Failed to update user info on the server.');
+                    if (data.pets && data.pets.length > 0) {
+                        renderPets(data.pets);
                     } else {
-                        // Update the UI with the new state
-                        document.getElementById('currentPoints').textContent = currentPoints;
-                        document.getElementById('petLevel').textContent = petLevel;
-                        document.getElementById('growthCost').textContent = getGrowthCost(petLevel);
-
-                        // Update pet name, image, and progress bar
-                        updatePetNameAndImage(petLevel);
-                        updateProgressBar(petLevel);
-
-                        // Display success message
-                        document.getElementById('resultMessage').textContent = '🎉 Your pet has grown to level ' + petLevel + '!';
-                        document.getElementById('resultMessage').style.color = 'green';
+                        document.getElementById('petsContainer').innerHTML = '<p>You don\'t have any pets yet!</p>';
                     }
                 })
-                .catch(error => {
-                    console.error('Error updating user info:', error);
-                    alert('An error occurred while updating user info.');
-                });
-        }
+                .catch(error => console.error('Error fetching user pets:', error));
+        };
 
-        // Function to update the progress bar
-        function updateProgressBar(level) {
-            const progressPercentage = Math.min((level / maxLevel) * 100, 100); // Ensure the percentage doesn't exceed 100
-            const progressBar = document.getElementById('levelProgress');
-            progressBar.style.width = progressPercentage + '%';
-            progressBar.textContent = Math.floor(progressPercentage) + '%';
-        }
+        // Render pets dynamically
+        function renderPets(pets) {
+            const petsContainer = document.getElementById('petsContainer');
+            petsContainer.innerHTML = ''; // Clear existing content
 
-        // Function to update the pet's name and image based on level
-        function updatePetNameAndImage(level) {
-            let petName = '';
-            let petImageSrc = '';
+            pets.forEach(pet => {
+                const petCard = document.createElement('div');
+                petCard.className = 'pet-card';
+                petCard.onclick = () => {
+                    window.location.href = `/pet?id=${pet.id}`;
+                };
 
-            if (level >= 1 && level <= 5) {
-                petName = 'Noob';
-                petImageSrc = '/static/images/noob.png'; // Replace with your actual image path
-            } else if (level >= 6 && level <= 10) {
-                petName = 'Beginner';
-                petImageSrc = '/static/images/beginner.png'; // Replace with your actual image path
-            } else if (level >= 11 && level <= 15) {
-                petName = 'Expert';
-                petImageSrc = '/static/images/expert.png'; // Replace with your actual image path
-            } else if (level >= 16) {
-                petName = 'Master';
-                petImageSrc = '/static/uploads/pet1.webp'; // Replace with your actual image path
-            }
+                const petImage = document.createElement('img');
+                petImage.className = 'pet-image';
+                petImage.src = pet.image_url;
+                petImage.alt = pet.name;
 
-            document.getElementById('petName').textContent = petName;
-            document.getElementById('petImage').src = petImageSrc;
-            document.getElementById('petImage').alt = petName + ' Image';
+                const petName = document.createElement('div');
+                petName.className = 'pet-name';
+                petName.textContent = pet.name;
+
+                const petLevel = document.createElement('div');
+                petLevel.className = 'pet-level';
+                petLevel.textContent = 'Level: ' + pet.level;
+
+                petCard.appendChild(petImage);
+                petCard.appendChild(petName);
+                petCard.appendChild(petLevel);
+                petsContainer.appendChild(petCard);
+            });
         }
     </script>
 </body>

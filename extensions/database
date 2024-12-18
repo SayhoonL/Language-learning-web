@@ -1,0 +1,56 @@
+import sqlite3
+
+def get_db_connection():
+    """Establishes a connection to the SQLite database."""
+    conn = sqlite3.connect('pets_database.db')
+    conn.row_factory = sqlite3.Row  # Enables dictionary-like row access
+    return conn
+
+def init_db():
+    """Initializes the database with required tables and seed data."""
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    # Create Account table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS Account (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            points INTEGER DEFAULT 0,
+            userLevel INTEGER DEFAULT 1
+        )
+    ''')
+
+    # Create Pets table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS Pets (
+            petID INTEGER PRIMARY KEY,
+            petName TEXT NOT NULL
+        )
+    ''')
+
+    # Create UserPets table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS UserPets (
+            userPetID INTEGER PRIMARY KEY AUTOINCREMENT,
+            petID INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            petLevel INTEGER DEFAULT 1,
+            FOREIGN KEY (username) REFERENCES Account(username),
+            FOREIGN KEY (petID) REFERENCES Pets(petID)
+        )
+    ''')
+
+    # Insert default pets into Pets table
+    c.execute('''
+        INSERT OR IGNORE INTO Pets (petID, petName) 
+        VALUES 
+        (1, 'charmander'), 
+        (2, 'charmeleon'), 
+        (3, 'charizard'), 
+        (4, 'pikachu'), 
+        (5, 'sayhoon')
+    ''')
+
+    conn.commit()
+    conn.close()

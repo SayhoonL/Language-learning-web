@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Pets</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+            text-align: center;
+        }
+        h1 {
+            color: #007BFF;
+            margin-top: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .button {
+            display: inline-block;
+            margin: 10px 0;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .pets-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        .pets-list li {
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-button {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .delete-button:hover {
+            background-color: #b02a37;
+        }
+        #egg-message {
+            font-size: 16px;
+            margin-top: 20px;
+            color: green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manage Your Pets</h1>
+    <div class="container">
+        <button class="button" onclick="getEgg()">Get an Egg</button>
+        <p id="egg-message"></p>
+
+        <ul id="pets-list" class="pets-list">
+            <!-- Pets will be dynamically rendered here -->
+        </ul>
+
+        <a href="/" class="button">Back to Dashboard</a>
+    </div>
+
+    <script>
+        // Fetch user pets and display them
+        function fetchPets() {
+            fetch('/get_user_pets')
+                .then(response => response.json())
+                .then(data => {
+                    const petsList = document.getElementById('pets-list');
+                    petsList.innerHTML = ''; // Clear existing pets
+
+                    if (data.pets && data.pets.length > 0) {
+                        data.pets.forEach(pet => {
+                            const petItem = document.createElement('li');
+
+                            const petInfo = document.createElement('span');
+                            petInfo.textContent = `${pet.name} - Level: ${pet.level}`;
+
+                            const deleteButton = document.createElement('button');
+                            deleteButton.textContent = 'Delete';
+                            deleteButton.className = 'delete-button';
+                            deleteButton.onclick = () => deletePet(pet.id);
+
+                            petItem.appendChild(petInfo);
+                            petItem.appendChild(deleteButton);
+                            petsList.appendChild(petItem);
+                        });
+                    } else {
+                        petsList.innerHTML = '<p>You don\'t have any pets yet!</p>';
+                    }
+                })
+                .catch(error => console.error('Error fetching pets:', error));
+        }
+
+        // Function to delete a pet
+        function deletePet(petID) {
+            fetch('/delete_pet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ petID })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert(data.message);
+                        fetchPets(); // Refresh the pet list
+                    } else {
+                        alert('Error deleting pet.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting pet:', error);
+                    alert('An error occurred while deleting the pet.');
+                });
+        }
+
+        // Function to get an egg
+        function getEgg() {
+            fetch('/get_egg', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const eggMessage = document.getElementById('egg-message');
+                    if (data.message) {
+                        eggMessage.textContent = data.message;
+                        fetchPets(); // Refresh the pet list
+                    } else {
+                        eggMessage.textContent = 'An error occurred.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting egg:', error);
+                    document.getElementById('egg-message').textContent = 'An error occurred.';
+                });
+        }
+
+        // Fetch pets on page load
+        window.onload = fetchPets;
+    </script>
+</body>
+</html>
