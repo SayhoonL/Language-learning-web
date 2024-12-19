@@ -56,13 +56,19 @@ h1 {
 .game-links img {
     width: 250px;
     height: auto;
-    border-radius: 10px;
-    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
     transition: transform 0.3s;
+    border: none;          /* Removes borders */
+    outline: none;         /* Removes outlines */
+    box-shadow: none;      /* Removes any box shadows */
 }
 
 .game-links img:hover {
-    transform: scale(1.1);
+    transform: scale(1.5);
+}
+
+.game-links a {
+    border: none;
+    outline: none;
 }
 
 /* Log out button on top-right */

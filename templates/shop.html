@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+            background: url('/static/uploads/shop-background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+        }
+        h1 {
+            margin-top: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        .shop-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px;
+        }
+        .item-card {
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            width: 200px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .item-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            margin-bottom: 10px;
+            border-radius: 10px;
+        }
+        .item-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .item-description {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .item-price {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #f9ca24;
+        }
+        .button {
+            padding: 10px;
+            background-color: #1abc9c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .button:hover {
+            background-color: #16a085;
+        }
+        .back-button {
+            margin-top: 20px;
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #6c757d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .back-button:hover {
+            background-color: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Shop</h1>
+    <div class="shop-container" id="shopContainer">
+        <!-- Items will be dynamically loaded here -->
+    </div>
+    <a href="/" class="back-button">Back to Dashboard</a>
+
+    <script>
+        // Fetch items from the backend
+        function fetchShopItems() {
+            fetch('/get_shop_items', { method: 'GET' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.items && data.items.length > 0) {
+                        renderItems(data.items);
+                    } else {
+                        document.getElementById('shopContainer').innerHTML = '<p>No items available in the shop.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching shop items:', error);
+                    alert('An error occurred while loading the shop.');
+                });
+        }
+
+        // Render shop items dynamically
+        function renderItems(items) {
+            const shopContainer = document.getElementById('shopContainer');
+            shopContainer.innerHTML = ''; // Clear existing content
+
+            items.forEach(item => {
+                const itemCard = document.createElement('div');
+                itemCard.className = 'item-card';
+
+                const itemImage = document.createElement('img');
+                itemImage.className = 'item-image';
+                itemImage.src = item.image_url;
+                itemImage.alt = item.name;
+
+                const itemName = document.createElement('div');
+                itemName.className = 'item-name';
+                itemName.textContent = item.name;
+
+                const itemDescription = document.createElement('div');
+                itemDescription.className = 'item-description';
+                itemDescription.textContent = item.description;
+
+                const itemPrice = document.createElement('div');
+                itemPrice.className = 'item-price';
+                itemPrice.textContent = `Price: ${item.price} points`;
+
+                const buyButton = document.createElement('button');
+                buyButton.className = 'button';
+                buyButton.textContent = 'Buy';
+                buyButton.onclick = () => purchaseItem(item.id);
+
+                itemCard.appendChild(itemImage);
+                itemCard.appendChild(itemName);
+                itemCard.appendChild(itemDescription);
+                itemCard.appendChild(itemPrice);
+                itemCard.appendChild(buyButton);
+                shopContainer.appendChild(itemCard);
+            });
+        }
+
+        // Purchase an item
+        function purchaseItem(itemID) {
+            fetch('/purchase_item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itemID: itemID })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Item purchased successfully!');
+                    } else {
+                        alert(data.message || 'Error purchasing item.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error purchasing item:', error);
+                    alert('An error occurred while purchasing the item.');
+                });
+        }
+
+        // Load shop items on page load
+        window.onload = fetchShopItems;
+    </script>
+</body>
+</html>

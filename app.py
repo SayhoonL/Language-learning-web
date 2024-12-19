@@ -47,19 +47,54 @@ def init_db():
         )
     ''')
 
-    # Insert default pets with image URLs
+    # Create Items table
     c.execute('''
-        INSERT OR IGNORE INTO Pets (petID, petName, image_url) 
+        CREATE TABLE IF NOT EXISTS Items (
+            itemID INTEGER PRIMARY KEY AUTOINCREMENT,
+            itemName TEXT NOT NULL,
+            description TEXT,
+            image_url TEXT,
+            price INTEGER NOT NULL
+        )
+    ''')
+
+    # Create UserItems table to track items owned by users
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS UserItems (
+            userItemID INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            itemID INTEGER NOT NULL,
+            quantity INTEGER DEFAULT 1,
+            FOREIGN KEY (username) REFERENCES Account(username),
+            FOREIGN KEY (itemID) REFERENCES Items(itemID)
+        )
+    ''')
+
+    # Insert default pets with images
+    c.execute('''
+        INSERT OR IGNORE INTO Pets (petID, petName, image_url)
         VALUES 
         (1, 'charmander', '/static/uploads/pet1.png'),
         (2, 'charmeleon', '/static/uploads/pet2.png'),
         (3, 'charizard', '/static/uploads/pet3.png'),
         (4, 'pikachu', '/static/uploads/pet4.png'),
-        (5, 'sayhoon', '/static/uploads/pet5.png')
+        (5, 'bulbasaur', '/static/uploads/pet5.png')
+    ''')
+
+    # Insert default items
+    c.execute('''
+        INSERT OR IGNORE INTO Items (itemName, description, image_url, price)
+        VALUES 
+        ('Potion', 'Restores 20 health points to a pet', '/static/uploads/potion.png', 10),
+        ('Super Potion', 'Restores 50 health points to a pet', '/static/uploads/super_potion.png', 20),
+        ('Revive', 'Revives a fainted pet with 50% health', '/static/uploads/revive.png', 30),
+        ('Rare Candy', 'Instantly levels up a pet', '/static/uploads/rare_candy.png', 50),
+        ('Berry', 'Slightly increases a pet''s experience', '/static/uploads/berry.png', 5)
     ''')
 
     conn.commit()
     conn.close()
+
 
 # Helper function
 
@@ -125,7 +160,7 @@ def signup():
         conn = sqlite3.connect('pets_database.db')
         c = conn.cursor()
         try:
-            c.execute("INSERT INTO Account (username, password) VALUES (?, ?)", (username, password))
+            c.execute("INSERT INTO Account (username, password, points) VALUES (?, ?, ?)", (username, password, 100))
             conn.commit()
         except sqlite3.IntegrityError:
             flash("Username already exists!", 'danger')
@@ -171,6 +206,28 @@ def pet():
     
     return render_template('pet.html', pet_id=pet_id)
 
+@app.route('/shop')
+def shop():
+    """Renders the shop page."""
+    if not is_logged_in():
+        return redirect(url_for('login'))
+    
+    conn = sqlite3.connect('pets_database.db')
+    c = conn.cursor()
+
+    # Fetch all items available in the shop
+    c.execute("SELECT itemID, itemName, description, image_url FROM Items")
+    items = c.fetchall()
+    conn.close()
+
+    # Pass the items to the shop template
+    shop_items = [
+        {"id": item[0], "name": item[1], "description": item[2], "image_url": item[3]}
+        for item in items
+    ]
+    
+    return render_template('shop.html', items=shop_items)
+
 @app.route('/manage_pets')
 def manage_pets():
     """Displays the manage pets page."""
@@ -180,11 +237,12 @@ def manage_pets():
     username = session['username']
     conn = sqlite3.connect('pets_database.db')
     c = conn.cursor()
-    c.execute("SELECT petID, petName FROM Pets")
+    c.execute("SELECT petID, petName, image_url FROM Pets")
     pets = c.fetchall()
     conn.close()
 
     return render_template('manage_pets.html', username=username, pets=pets)
+
 
 @app.route('/get_egg', methods=['POST'])
 def get_egg():
@@ -197,20 +255,26 @@ def get_egg():
     c = conn.cursor()
 
     # Get all available pet IDs
-    c.execute("SELECT petID FROM Pets")
-    pet_ids = [row[0] for row in c.fetchall()]
-    print("Available pet IDs:", pet_ids)  # Debug: Check pet IDs
+    c.execute("SELECT petID, petName FROM Pets")
+    pets = c.fetchall()  # Fetch all pet IDs and names
+    print("Available pets:", pets)  # Debug: Check available pets
 
-    if not pet_ids:
+    if not pets:
         print("No pets available.")  # Debug: No pets available
         return jsonify({'message': 'No pets available to assign.'}), 400
 
-    # Randomly select a pet ID
-    random_pet_id = random.choice(pet_ids)
-    print("Selected pet ID:", random_pet_id)  # Debug: Selected pet ID
+    # Randomly select a pet
+    random_pet = random.choice(pets)
+    random_pet_id = random_pet[0]
+    random_pet_name = random_pet[1]
+    print("Selected pet ID and name:", random_pet_id, random_pet_name)  # Debug: Selected pet details
 
     try:
-        c.execute("INSERT INTO UserPets (username, petID, petLevel, expPoints) VALUES (?, ?, 1, 0)", (username, random_pet_id))
+        # Insert the selected pet into the UserPets table
+        c.execute(
+            "INSERT INTO UserPets (username, petID, petLevel, expPoints) VALUES (?, ?, 1, 0)",
+            (username, random_pet_id)
+        )
         conn.commit()
     except sqlite3.IntegrityError as e:
         print("Integrity error:", e)  # Debug: Database error
@@ -218,7 +282,13 @@ def get_egg():
     finally:
         conn.close()
 
-    return jsonify({'message': 'Egg hatched! You received a new pet!', 'petID': random_pet_id}), 200
+    # Return the pet details
+    return jsonify({
+        'message': f'Egg hatched! You received a new pet: {random_pet_name}!',
+        'petID': random_pet_id,
+        'petName': random_pet_name
+    }), 200
+
 
 @app.route('/link_pet', methods=['POST'])
 def link_pet():
@@ -312,7 +382,7 @@ def get_pet_details():
     conn = sqlite3.connect('pets_database.db')
     c = conn.cursor()
     c.execute("""
-        SELECT p.petName, p.image_url, up.expPoints 
+        SELECT p.petName, p.image_url, up.expPoints, up.petLevel 
         FROM UserPets up 
         JOIN Pets p ON up.petID = p.petID 
         WHERE up.userPetID = ? AND up.username = ?
@@ -321,21 +391,62 @@ def get_pet_details():
     conn.close()
 
     if pet:
-        return jsonify({'pet': {'name': pet[0], 'image_url': pet[1], 'exp': pet[2]}}), 200
+        return jsonify({'pet': {'name': pet[0], 'image_url': pet[1], 'exp': pet[2], 'level': pet[3]}}), 200
     return jsonify({'error': 'Pet not found'}), 404
 
 @app.route('/feed_pet', methods=['POST'])
 def feed_pet():
-    """Increases the experience points of a specific pet."""
+    """Handles feeding an item to a pet."""
     if not is_logged_in():
         return jsonify({'error': 'User not logged in'}), 401
 
-    pet_id = request.args.get('id')
+    data = request.json
+    pet_id = data.get('petID')
+    item_id = data.get('itemID')
+
+    if not pet_id or not item_id:
+        return jsonify({'error': 'Pet ID and Item ID are required'}), 400
+
     username = session['username']
     conn = sqlite3.connect('pets_database.db')
     c = conn.cursor()
+
+    # Check if the user owns the item
     c.execute("""
-        SELECT expPoints FROM UserPets 
+        SELECT quantity 
+        FROM UserItems 
+        WHERE username = ? AND itemID = ?
+    """, (username, item_id))
+    item = c.fetchone()
+
+    if not item or item[0] <= 0:
+        conn.close()
+        return jsonify({'error': 'You do not own this item or are out of stock'}), 400
+
+    # Reduce item quantity
+    c.execute("""
+        UPDATE UserItems 
+        SET quantity = quantity - 1 
+        WHERE username = ? AND itemID = ?
+    """, (username, item_id))
+
+    # Get item effects (e.g., exp boost)
+    c.execute("SELECT itemName FROM Items WHERE itemID = ?", (item_id,))
+    item_name = c.fetchone()[0]
+
+    exp_gain = 0
+    if item_name == 'Potion':
+        exp_gain = 10
+    elif item_name == 'Berry':
+        exp_gain = 5
+    elif item_name == 'Rare Candy':
+        exp_gain = 100  # Level up directly
+    # Add more item effects as needed
+
+    # Update pet's experience points and handle leveling up
+    c.execute("""
+        SELECT expPoints, petLevel 
+        FROM UserPets 
         WHERE userPetID = ? AND username = ?
     """, (pet_id, username))
     pet = c.fetchone()
@@ -344,19 +455,104 @@ def feed_pet():
         conn.close()
         return jsonify({'error': 'Pet not found'}), 404
 
-    new_exp = pet[0] + 10  # Add 10 exp points
+    new_exp = pet[0] + exp_gain
+    new_level = pet[1]
+
+    if new_exp >= 100:
+        new_level += 1
+        new_exp -= 100  # Reset experience after leveling up
+
     c.execute("""
         UPDATE UserPets 
-        SET expPoints = ? 
+        SET expPoints = ?, petLevel = ? 
         WHERE userPetID = ? AND username = ?
-    """, (new_exp, pet_id, username))
+    """, (new_exp, new_level, pet_id, username))
+
     conn.commit()
     conn.close()
 
-    return jsonify({'success': True, 'newExp': new_exp}), 200
+    return jsonify({
+        'success': True,
+        'newExp': new_exp,
+        'newLevel': new_level,
+        'message': f"{item_name} was successfully used!"
+    }), 200
 
 
+@app.route('/get_shop_items', methods=['GET'])
+def get_shop_items():
+    """Fetches all items available in the shop, including prices."""
+    conn = sqlite3.connect('pets_database.db')
+    c = conn.cursor()
+    c.execute("SELECT itemID, itemName, description, image_url, price FROM Items")
+    items = c.fetchall()
+    conn.close()
 
+    # Include price in the response
+    items_list = [
+        {
+            'id': item[0],
+            'name': item[1],
+            'description': item[2],
+            'image_url': item[3],
+            'price': item[4]
+        }
+        for item in items
+    ]
+    return jsonify({'items': items_list}), 200
+
+
+@app.route('/purchase_item', methods=['POST'])
+def purchase_item():
+    """Handles purchasing an item."""
+    if not is_logged_in():
+        return jsonify({'message': 'User not logged in'}), 401
+
+    data = request.json
+    item_id = data.get('itemID')
+    username = session['username']
+
+    if not item_id:
+        return jsonify({'message': 'Item ID is required'}), 400
+
+    conn = sqlite3.connect('pets_database.db')
+    c = conn.cursor()
+
+    # Check if the user has enough points
+    c.execute("SELECT points FROM Account WHERE username = ?", (username,))
+    user_points = c.fetchone()
+    if not user_points or user_points[0] < 10:  # Example: Assume all items cost 10 points
+        conn.close()
+        return jsonify({'message': 'Not enough points to purchase this item'}), 400
+
+    # Deduct points and add item to user's inventory
+    c.execute("UPDATE Account SET points = points - 10 WHERE username = ?", (username,))
+    c.execute("INSERT INTO UserItems (username, itemID) VALUES (?, ?)", (username, item_id))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True}), 200
+
+@app.route('/get_user_items', methods=['GET'])
+def get_user_items():
+    """Fetches items owned by the logged-in user."""
+    if not is_logged_in():
+        return jsonify({'error': 'User not logged in'}), 401
+
+    username = session['username']
+    conn = sqlite3.connect('pets_database.db')
+    c = conn.cursor()
+    c.execute("""
+        SELECT ui.itemID, i.itemName, ui.quantity 
+        FROM UserItems ui
+        JOIN Items i ON ui.itemID = i.itemID
+        WHERE ui.username = ?
+    """, (username,))
+    items = c.fetchall()
+    conn.close()
+
+    items_list = [{'id': item[0], 'name': item[1], 'quantity': item[2]} for item in items]
+    return jsonify({'items': items_list}), 200
 
 @app.route('/logout')
 def logout():

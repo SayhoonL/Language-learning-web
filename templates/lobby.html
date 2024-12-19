@@ -8,53 +8,107 @@
         body {
             font-family: Arial, sans-serif;
             background-color: #2c3e50;
+            background-image: url('/static/uploads/background4.png');
+            background-repeat: no-repeat;
+            background-size: 900px;
+            background-position: center 25px;
             color: white;
             text-align: center;
             margin: 0;
-            padding: 20px;
+            padding: 0;
         }
 
+        .back-button {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+        
         .pet-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-            margin: 20px auto;
+            position: relative;
+            width: 100%;
+            height: 400px;
+            overflow: hidden;
+            margin-top: 50px;
         }
 
         .pet-card {
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 10px 20px;
-            width: 300px;
-            text-align: center;
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%); /* Center the card */
+            transform-origin: center; /* Ensure scaling happens uniformly */
+            width: 250px;
+            opacity: 0; /* Default to hidden */
+            transition: transform 0.3s ease-in-out, opacity 0.5s ease-in-out; /* Smooth scaling and opacity changes */
             cursor: pointer;
-            transition: transform 0.3s;
+            pointer-events: none; /* Prevent interaction with hidden cards */
+        }
+
+        .pet-card.active {
+            opacity: 1; /* Show only active card */
+            pointer-events: auto; /* Enable interaction for active card */
         }
 
         .pet-card:hover {
-            transform: scale(1.05);
-            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateX(-50%) scale(1.2); /* Add scaling without affecting centering */
         }
-
+        .pet-level {
+            font-size: 16px;
+            font-family: 'Courier New', monospace; /* Change font for pet level */
+            margin: 5px 0;
+        }
         .pet-image {
-            width: 100px;
-            height: 100px;
+            width: 300px;
+            height: 300px;
             object-fit: cover;
             border-radius: 50%;
             margin-bottom: 10px;
+            transition: transform 0.3s ease-in-out;
         }
 
-        .pet-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin: 5px 0;
+        .pet-info {
+            position: absolute;
+            top: 50%;
+            left: 60%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: left;
+            display: none;
         }
 
-        .pet-level {
-            font-size: 16px;
-            margin: 5px 0;
+        .arrow {
+            font-size: 30px;
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #1abc9c;
+            user-select: none;
+        }
+
+        .arrow:hover {
+            color: #16a085;
+        }
+
+        #left-arrow {
+            left: 10%;
+        }
+
+        #right-arrow {
+            right: 10%;
         }
 
         a {
@@ -71,20 +125,30 @@
     </style>
 </head>
 <body>
-    <h1>Welcome to the Pet Growth Lobby</h1>
     <div class="pet-container" id="petsContainer">
-        <p>Loading your pets...</p>
+        <!-- Pet cards will be dynamically generated here -->
     </div>
-    <a href="/">Back to Dashboard</a>
+    <div id="petInfo" class="pet-info"></div>
+
+    <!-- Navigation Arrows -->
+    <div class="arrow" id="left-arrow" onclick="showPreviousPet()">&#9664;</div>
+    <div class="arrow" id="right-arrow" onclick="showNextPet()">&#9654;</div>
+
+    <a href="/" class="back-button">Back to Dashboard</a>
 
     <script>
+        let currentIndex = 0; // Tracks the current pet index
+        let petsData = []; // Array to store fetched pet data
+
         // Fetch the user's pets from the backend
         window.onload = function () {
             fetch('/get_user_pets', { method: 'GET' })
                 .then(response => response.json())
                 .then(data => {
                     if (data.pets && data.pets.length > 0) {
-                        renderPets(data.pets);
+                        petsData = data.pets;
+                        renderPets();
+                        showPet(currentIndex); // Show the first pet card
                     } else {
                         document.getElementById('petsContainer').innerHTML = '<p>You don\'t have any pets yet!</p>';
                     }
@@ -93,35 +157,118 @@
         };
 
         // Render pets dynamically
-        function renderPets(pets) {
+        function renderPets() {
             const petsContainer = document.getElementById('petsContainer');
             petsContainer.innerHTML = ''; // Clear existing content
 
-            pets.forEach(pet => {
+            console.log("Pets data received for rendering:", petsData); // Debug: Log the pets data
+
+            petsData.forEach((pet, index) => {
+                // Log each pet's details, including `expPoints`
+                console.log(`Rendering pet ${index}:`, pet);
+
                 const petCard = document.createElement('div');
                 petCard.className = 'pet-card';
-                petCard.onclick = () => {
-                    window.location.href = `/pet?id=${pet.id}`;
-                };
+                petCard.id = `pet-card-${index}`; // Unique ID for each card
+                petCard.onmouseover = () => fetchPetDetails(pet.id);
+
+                const petName = document.createElement('div');
+                petName.className = 'pet-name';
+                petName.textContent = pet.name;
 
                 const petImage = document.createElement('img');
                 petImage.className = 'pet-image';
                 petImage.src = pet.image_url;
                 petImage.alt = pet.name;
 
-                const petName = document.createElement('div');
-                petName.className = 'pet-name';
-                petName.textContent = pet.name;
-
-                const petLevel = document.createElement('div');
-                petLevel.className = 'pet-level';
-                petLevel.textContent = 'Level: ' + pet.level;
-
-                petCard.appendChild(petImage);
                 petCard.appendChild(petName);
-                petCard.appendChild(petLevel);
+                petCard.appendChild(petImage);
+                
+                petCard.onmouseover = () => showPetInfo();
+                petCard.onmouseout = () => hidePetInfo();
+
                 petsContainer.appendChild(petCard);
+
+                // Verify if expPoints are correct
+                console.log(`Pet ID: ${pet.id}, Name: ${pet.name}, Exp Points: ${pet.exp}`);
             });
+        }
+        
+        function fetchPetDetails(petId) {
+            fetch(`/get_pet_details?id=${petId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.pet) {
+                        const petInfo = document.getElementById('petInfo');
+                        petInfo.innerHTML = `
+                            <h3>${data.pet.name}</h3>
+                            <p>Level: ${data.pet.level}</p>
+                            <p>Experience: ${data.pet.exp}</p>
+                        `;
+                        petInfo.style.display = 'block';
+                    } else {
+                        console.error('Error loading pet details.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pet details:', error);
+                });
+        }
+
+        function fetchUserItems() {
+            fetch('/get_user_items')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.items) {
+                        const itemsDropdown = document.getElementById('items');
+                        itemsDropdown.innerHTML = ''; // Clear existing options
+
+                        data.items.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = `${item.name} (x${item.quantity})`;
+                            itemsDropdown.appendChild(option);
+                        });
+                    } else {
+                        alert('No items available.');
+                    }
+                })
+                .catch(error => console.error('Error fetching user items:', error));
+        }
+
+        // Show a specific pet card
+        function showPet(index) {
+            const cards = document.querySelectorAll('.pet-card');
+            cards.forEach(card => card.classList.remove('active')); // Hide all cards
+            const activeCard = document.getElementById(`pet-card-${index}`);
+            if (activeCard) {
+                activeCard.classList.add('active'); // Show the current card
+            }
+        }
+
+        // Show the next pet card
+        function showNextPet() {
+            currentIndex = (currentIndex + 1) % petsData.length; // Loop back to the start
+            showPet(currentIndex);
+        }
+
+        // Show the previous pet card
+        function showPreviousPet() {
+            currentIndex = (currentIndex - 1 + petsData.length) % petsData.length; // Loop back to the end
+            showPet(currentIndex);
+        }
+        function hidePetInfo() {
+            const petInfo = document.getElementById('petInfo');
+            petInfo.style.display = 'none';
+        }
+        function showPetInfo() {
+            const petInfo = document.getElementById('petInfo');
+            petInfo.innerHTML = `
+                <h3>${pet.name}</h3>
+                <p>Level: ${pet.petLevel}</p>
+                <p>Experience: ${pet.expPoints}</p>
+            `;
+            petInfo.style.display = 'block';
         }
     </script>
 </body>

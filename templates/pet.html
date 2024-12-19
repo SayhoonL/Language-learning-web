@@ -7,17 +7,29 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            margin: 20px;
+            margin: 0;
+            padding: 0;
             text-align: center;
-        }
-        h1 {
-            color: #333;
-        }
-        .pet-container {
+            background: url('/static/uploads/grass.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-top: 30px;
+            justify-content: center;
+        }
+        h1 {
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        .pet-container {
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
         .pet-image {
             width: 200px;
@@ -52,6 +64,15 @@
         .back-button:hover {
             background-color: #5a6268;
         }
+        .item-dropdown {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+        .item-dropdown select {
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -59,11 +80,22 @@
     <div class="pet-container">
         <img id="petImage" class="pet-image" alt="Pet Image">
         <h2 id="petName"></h2>
+        <p>Level: <span id="petLevel">Loading...</span></p>
         <p>Experience Points: <span id="petExp">Loading...</span></p>
+
+        <!-- Item selection dropdown -->
+        <div class="item-dropdown">
+            <label for="items">Select an item to feed:</label>
+            <select id="items">
+                <!-- Items will be dynamically loaded -->
+            </select>
+        </div>
+
+        <!-- Feed button -->
         <button class="button" onclick="feedPet()">Feed</button>
     </div>
 
-    <!-- Back to Manage Pets -->
+    <!-- Back to Lobby -->
     <a href="/lobby" class="back-button">Back to Lobby</a>
 
     <script>
@@ -77,6 +109,7 @@
                     if (data.pet) {
                         document.getElementById('petImage').src = data.pet.image_url;
                         document.getElementById('petName').textContent = data.pet.name;
+                        document.getElementById('petLevel').textContent = data.pet.level;
                         document.getElementById('petExp').textContent = data.pet.exp;
                     } else {
                         alert('Error loading pet details.');
@@ -88,19 +121,46 @@
                 });
         }
 
-        // Feed the pet to increase experience points
+        // Fetch user's items from the backend
+        function fetchUserItems() {
+            fetch('/get_user_items')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.items) {
+                        const itemsDropdown = document.getElementById('items');
+                        itemsDropdown.innerHTML = ''; // Clear existing options
+
+                        data.items.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = `${item.name} (x${item.quantity})`;
+                            itemsDropdown.appendChild(option);
+                        });
+                    } else {
+                        alert('No items available.');
+                    }
+                })
+                .catch(error => console.error('Error fetching user items:', error));
+        }
+
+        // Feed the selected item to the pet
         function feedPet() {
-            fetch(`/feed_pet?id=${petId}`, {
+            const itemId = document.getElementById('items').value;
+
+            fetch('/feed_pet', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ petID: petId, itemID: itemId })
             })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
+                        document.getElementById('petLevel').textContent = data.newLevel;
                         document.getElementById('petExp').textContent = data.newExp;
-                        alert('Your pet gained experience!');
+                        alert(data.message || 'Your pet gained experience!');
+                        fetchUserItems(); // Refresh items after use
                     } else {
-                        alert('Error feeding pet.');
+                        alert(data.error || 'Error feeding pet.');
                     }
                 })
                 .catch(error => {
@@ -109,8 +169,11 @@
                 });
         }
 
-        // Load pet details on page load
-        window.onload = fetchPetDetails;
+        // Load pet details and user items on page load
+        window.onload = function () {
+            fetchPetDetails();
+            fetchUserItems();
+        };
     </script>
 </body>
 </html>
