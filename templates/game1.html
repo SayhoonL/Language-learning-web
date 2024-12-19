@@ -139,17 +139,27 @@
         }
 
         function updateUserInfo() {
+            console.log('Updating user info with points:', currentPoints);
+
             fetch('/update_user', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ points: currentPoints })
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
-                if (!data.success) {
-                    alert('Failed to update user info on the server.');
+                if (data.error) {
+                    console.error('Backend returned an error:', data.error);
+                    alert(`Error: ${data.error}`);
                 } else {
-                    console.log('User info successfully updated on the backend:', { points: currentPoints });
+                    console.log('User info successfully updated:', data.message);
+                    alert('User info successfully updated!');
                 }
             })
             .catch(error => {

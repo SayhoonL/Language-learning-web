@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dodge the Falling Objects</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        #controls button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #startEndButtons {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+
+        #startEndButtons button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="controls" style="display: none;">
+        <button id="moveLeft">Move Left</button>
+        <button id="moveRight">Move Right</button>
+    </div>
+
+    <div id="startEndButtons">
+        <button id="startGame">Start Game</button>
+        <button id="endGame" style="display: none;">End Game</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const player = {
+            x: canvas.width / 2 - 20,
+            y: canvas.height - 120, // Move the player higher to avoid distracting controls
+            width: 40,
+            height: 40,
+            color: 'blue',
+            speed: 10
+        };
+
+        const fallingObjects = [];
+        const objectSize = 30;
+        let objectSpeed = 4; // Start speed of falling objects
+        let score = 0;
+        let scoreUpdateInterval = 20;
+        let frameCount = 0;
+        let gameOver = false;
+        let gameRunning = false;
+
+        const backgroundColors = ['#ffffff', '#ffff99', '#ccffcc', '#e6ccff', '#cccccc'];
+
+        function createObject() {
+            if (gameRunning) {
+                const x = Math.random() * (canvas.width - objectSize);
+                fallingObjects.push({ x, y: -objectSize, delay: Math.random() * 500 }); // Add delay property
+            }
+        }
+
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawObjects() {
+            ctx.fillStyle = 'red';
+            for (const obj of fallingObjects) {
+                if (obj.delay <= 0) { // Draw only when delay has passed
+                    ctx.fillRect(obj.x, obj.y, objectSize, objectSize);
+                } else {
+                    obj.delay -= 16; // Reduce delay by approximately one frame duration
+                }
+            }
+        }
+
+        function moveObjects() {
+            for (const obj of fallingObjects) {
+                if (obj.delay <= 0) { // Move only when delay has passed
+                    obj.y += objectSpeed;
+                }
+            }
+        }
+
+        function checkCollision() {
+            for (const obj of fallingObjects) {
+                if (
+                    obj.x < player.x + player.width &&
+                    obj.x + objectSize > player.x &&
+                    obj.y < player.y + player.height &&
+                    obj.y + objectSize > player.y
+                ) {
+                    if (!gameOver) {
+                        gameOver = true;
+                        alert(`Game Over! Your score: ${score}`);
+                        endGame();
+                    }
+                }
+            }
+        }
+
+        function updateScore() {
+            frameCount++;
+            if (frameCount % scoreUpdateInterval === 0 && gameRunning) {
+                score++;
+                if (score % 10 === 0) { // Increase speed every 10 points
+                    objectSpeed += 0.5;
+                }
+                if (score % 50 === 0) { // Change background color every 50 points
+                    const colorIndex = Math.floor(score / 50) % backgroundColors.length;
+                    document.body.style.backgroundColor = backgroundColors[colorIndex];
+                }
+            }
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 30);
+        }
+
+        function gameLoop() {
+            if (gameRunning) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                drawPlayer();
+                drawObjects();
+                moveObjects();
+                checkCollision();
+                updateScore();
+
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function startGame() {
+            gameRunning = true;
+            gameOver = false;
+            score = 0;
+            frameCount = 0;
+            fallingObjects.length = 0;
+            objectSpeed = 4; // Reset speed
+            document.body.style.backgroundColor = backgroundColors[0]; // Reset background color
+
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('startGame').style.display = 'none';
+            document.getElementById('endGame').style.display = 'inline-block';
+
+            setInterval(createObject, 1000);
+            gameLoop();
+        }
+
+        function endGame() {
+            gameRunning = false;
+            document.getElementById('controls').style.display = 'none';
+            document.getElementById('startGame').style.display = 'inline-block';
+            document.getElementById('endGame').style.display = 'none';
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'ArrowLeft' && player.x > 0) {
+                player.x -= player.speed;
+            } else if (event.key === 'ArrowRight' && player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+        });
+
+        document.getElementById('moveLeft').addEventListener('click', () => {
+            if (player.x > 0) {
+                player.x -= player.speed;
+            }
+        });
+
+        document.getElementById('moveRight').addEventListener('click', () => {
+            if (player.x < canvas.width - player.width) {
+                player.x += player.speed;
+            }
+        });
+
+        document.getElementById('startGame').addEventListener('click', startGame);
+        document.getElementById('endGame').addEventListener('click', endGame);
+    </script>
+</body>
+</html>
