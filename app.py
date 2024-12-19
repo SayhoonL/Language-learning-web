@@ -343,12 +343,30 @@ def delete_pet():
 
 @app.route('/get_user_info', methods=['GET'])
 def get_user_info():
-    """Fetches logged-in user's information."""
+    """Fetches logged-in user's information, including points."""
     if not is_logged_in():
         return jsonify({'error': 'User not logged in'}), 401
 
     username = session['username']
-    return jsonify({'username': username}), 200
+    conn = sqlite3.connect('pets_database.db') 
+    c = conn.cursor()
+
+    c.execute("""
+        SELECT username, points 
+        FROM Account 
+        WHERE username = ?
+    """, (username,))
+    user_info = c.fetchone()
+    conn.close()
+
+    if not user_info:
+        return jsonify({'error': 'User not found'}), 404
+
+    user_data = {
+        'username': user_info[0],
+        'points': user_info[1]
+    }
+    return jsonify(user_data), 200
 
 @app.route('/get_user_pets', methods=['GET'])
 def get_user_pets():

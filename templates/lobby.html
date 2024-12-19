@@ -174,17 +174,19 @@
 
                 const petName = document.createElement('div');
                 petName.className = 'pet-name';
-                petName.textContent = pet.name;
 
                 const petImage = document.createElement('img');
                 petImage.className = 'pet-image';
                 petImage.src = pet.image_url;
                 petImage.alt = pet.name;
+                petImage.onclick = () => {
+                    window.location.href = `/pet?id=${pet.id}`;
+                };
 
                 petCard.appendChild(petName);
                 petCard.appendChild(petImage);
                 
-                petCard.onmouseover = () => showPetInfo();
+                petCard.onmouseover = () => showPetInfo(pet);
                 petCard.onmouseout = () => hidePetInfo();
 
                 petsContainer.appendChild(petCard);
@@ -199,21 +201,28 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.pet) {
-                        const petInfo = document.getElementById('petInfo');
-                        petInfo.innerHTML = `
-                            <h3>${data.pet.name}</h3>
-                            <p>Level: ${data.pet.level}</p>
-                            <p>Experience: ${data.pet.exp}</p>
-                        `;
-                        petInfo.style.display = 'block';
+                        console.log("Fetched pet details:", data.pet); // Log the entire pet details
+
+                        // Update the data attributes of the pet card
+                        const petCard = document.getElementById(`pet-card-${petId}`);
+                        petCard.dataset.level = data.pet.level;
+                        petCard.dataset.exp = data.pet.exp;
+
+                        // Log the level and exp for debugging
+                        console.log(`Pet Level: ${data.pet.level}`);
+                        console.log(`Pet Experience: ${data.pet.exp}`);
+
+                        // Show the details
+                        updatePetInfo(data.pet);
                     } else {
-                        console.error('Error loading pet details.');
+                        console.error('Error: Pet details not found.');
                     }
                 })
                 .catch(error => {
                     console.error('Error fetching pet details:', error);
                 });
         }
+
 
         function fetchUserItems() {
             fetch('/get_user_items')
@@ -261,13 +270,26 @@
             const petInfo = document.getElementById('petInfo');
             petInfo.style.display = 'none';
         }
-        function showPetInfo() {
+        function showPetInfo(pet) {
+            // Log the pet object to check its contents
+            console.log("Pet details received in showPetInfo:", pet);
+
             const petInfo = document.getElementById('petInfo');
+
+            // Log the element to ensure it's being updated correctly
+            console.log("petInfo element before update:", petInfo);
+
+            // Update the pet info HTML
             petInfo.innerHTML = `
                 <h3>${pet.name}</h3>
-                <p>Level: ${pet.petLevel}</p>
-                <p>Experience: ${pet.expPoints}</p>
+                <p>Level: ${pet.level}</p>
+                <p>Experience: ${pet.exp}</p>
             `;
+
+            // Log the element after update
+            console.log("petInfo element after update:", petInfo.innerHTML);
+
+            // Make the pet info visible
             petInfo.style.display = 'block';
         }
     </script>
