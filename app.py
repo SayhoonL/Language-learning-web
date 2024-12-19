@@ -368,6 +368,53 @@ def get_user_info():
     }
     return jsonify(user_data), 200
 
+@app.route('/update_user', methods=['POST'])
+def update_user():
+    """Updates logged-in user's information, such as points."""
+    # Step 1: Check if the user is logged in
+    if not is_logged_in():
+        return jsonify({'error': 'User not logged in'}), 401
+
+    username = session.get('username')
+    if not username:
+        return jsonify({'error': 'Session expired. Please log in again.'}), 401
+
+    # Step 2: Parse and validate request data
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Invalid request data: No JSON received'}), 400
+
+    points = data.get('points')
+    if points is None:
+        return jsonify({'error': 'Points value is required'}), 400
+
+    try:
+        # Step 3: Connect to the database
+        conn = sqlite3.connect('pets_database.db')
+        c = conn.cursor()
+
+        # Step 4: Update the user's points in the Account table
+        c.execute("""
+            UPDATE Account
+            SET points = ?
+            WHERE username = ?
+        """, (points, username))
+        conn.commit()
+
+        # Step 5: Check if any rows were updated
+        if c.rowcount == 0:
+            return jsonify({'error': 'User not found or no changes made'}), 404
+    except sqlite3.Error as e:
+        # Step 6: Handle database errors
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+    # Step 7: Return success response
+    return jsonify({'message': 'User information updated successfully'}), 200
+
+
+
 @app.route('/get_user_pets', methods=['GET'])
 def get_user_pets():
     """Fetches pets linked to the logged-in user."""
