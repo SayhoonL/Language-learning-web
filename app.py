@@ -83,14 +83,15 @@ def init_db():
 
     # Insert default items
     c.execute('''
-        INSERT OR IGNORE INTO Items (itemName, description, image_url, price)
+        INSERT OR IGNORE INTO Items (itemID, itemName, description, image_url, price)
         VALUES 
-        ('Potion', 'Restores 20 health points to a pet', '/static/uploads/potion.png', 10),
-        ('Super Potion', 'Restores 50 health points to a pet', '/static/uploads/super_potion.png', 20),
-        ('Revive', 'Revives a fainted pet with 50% health', '/static/uploads/revive.png', 30),
-        ('Rare Candy', 'Instantly levels up a pet', '/static/uploads/rare_candy.png', 50),
-        ('Berry', 'Slightly increases a pet''s experience', '/static/uploads/berry.png', 5)
+        (1, 'Potion', 'Restores 20 health points to a pet', '/static/uploads/item1.png', 10),
+        (2, 'Super Potion', 'Restores 50 health points to a pet', '/static/uploads/item2.png', 20),
+        (3, 'Revive', 'Revives a fainted pet with 50% health', '/static/uploads/item3.png', 30),
+        (4, 'Rare Candy', 'Instantly levels up a pet', '/static/uploads/item4.png', 50),
+        (5, 'Berry', 'Slightly increases a pet\'\'s experience', '/static/uploads/item5.png', 5)
     ''')
+
 
     conn.commit()
     conn.close()
@@ -608,7 +609,7 @@ def get_user_items():
     conn = sqlite3.connect('pets_database.db')
     c = conn.cursor()
     c.execute("""
-        SELECT ui.itemID, i.itemName, ui.quantity 
+        SELECT ui.userItemID, ui.itemID, i.itemName, i.image_url
         FROM UserItems ui
         JOIN Items i ON ui.itemID = i.itemID
         WHERE ui.username = ?
@@ -616,8 +617,37 @@ def get_user_items():
     items = c.fetchall()
     conn.close()
 
-    items_list = [{'id': item[0], 'name': item[1], 'quantity': item[2]} for item in items]
+    # Map fetched data to the expected JSON structure
+    items_list = [{'userItemID': item[0], 'itemID': item[1], 'name': item[2], 'image_url': item[3]} for item in items]
     return jsonify({'items': items_list}), 200
+
+
+@app.route('/delete_item', methods=['POST'])
+def delete_item():
+    """Deletes an item linked to the logged-in user by userItemID."""
+    if not is_logged_in():
+        return jsonify({'message': 'User not logged in'}), 401
+
+    data = request.json
+    user_item_id = data.get('userItemID')  # Expecting userItemID from the frontend
+
+    if not user_item_id:
+        return jsonify({'message': 'userItemID is required'}), 400
+
+    username = session['username']
+    conn = sqlite3.connect('pets_database.db')
+    c = conn.cursor()
+
+    try:
+        # Delete the item based on userItemID and username
+        c.execute("DELETE FROM UserItems WHERE userItemID = ? AND username = ?", (user_item_id, username))
+        conn.commit()
+    except Exception as e:
+        return jsonify({'message': 'Error deleting item', 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+    return jsonify({'message': 'Item deleted successfully!', 'userItemID': user_item_id}), 200
 
 @app.route('/logout')
 def logout():

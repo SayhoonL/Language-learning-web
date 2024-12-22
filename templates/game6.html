@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Cookie Run-Inspired Game (Single File)</title>
+  <style>
+    /* ====== CSS ====== */
+    body {
+      margin: 0;
+      background: #FFEECC; /* Soft cookie-like background color */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #gameCanvas {
+      border: 2px solid #333;
+      background: #FAFAFA;
+      display: block;
+      margin-top: 10px;
+    }
+
+    .info {
+      text-align: center;
+      font-family: sans-serif;
+      margin-top: 10px;
+    }
+
+    #gameOverScreen.hidden {
+      display: none;
+    }
+
+    #gameOverScreen {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ====== HTML ====== -->
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  
+  <div class="info">
+    <p>Score: <span id="scoreDisplay">0</span></p>
+    <div id="gameOverScreen" class="hidden">
+      <h1>Game Over!</h1>
+      <p>You scored: <span id="finalScore">0</span></p>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+
+  <!-- ====== JavaScript ====== -->
+  <script>
+    // === Global References ===
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const scoreDisplay = document.getElementById("scoreDisplay");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const finalScore = document.getElementById("finalScore");
+    const restartBtn = document.getElementById("restartBtn");
+
+    // Canvas Dimensions
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    // Load Images (all pointing to "/static/uploads/sky.png")
+    const bgImg = new Image();
+    bgImg.src = "/static/uploads/sky.png";
+
+    const cookieImg = new Image();
+    cookieImg.src = "/static/uploads/sky.png";
+
+    const obstacleImg = new Image();
+    obstacleImg.src = "/static/uploads/sky.png";
+
+    const jellyImg = new Image();
+    jellyImg.src = "/static/uploads/sky.png";
+
+    // Game State
+    let score = 0;
+    let gameOver = false;
+
+    // Background Scroll
+    let bgX = 0;
+    let scrollSpeed = 2;
+
+    // Cookie Properties
+    const cookie = {
+      x: 100,
+      y: HEIGHT - 100,
+      width: 60,
+      height: 60,
+      dy: 0,
+      jumpForce: 7.5,
+      gravity: 0.3,
+      onGround: true
+    };
+
+    // Obstacles + Jellies
+    let obstacles = [];
+    let jellies = [];
+
+    let obstacleDelay = 120;
+    let obstacleTimer = 0;
+    const obstacleSpeed = 4;
+
+    let jellyDelay = 90;
+    let jellyTimer = 0;
+    const jellySpeed = 4;
+
+    // Key Input
+    let keys = {};
+
+    // === Event Listeners ===
+    document.addEventListener("keydown", e => {
+      keys[e.code] = true;
+    });
+
+    document.addEventListener("keyup", e => {
+      keys[e.code] = false;
+    });
+
+    restartBtn.addEventListener("click", function() {
+      resetGame();
+      gameLoop();
+    });
+
+    // === Game Loop ===
+    function gameLoop() {
+      if (gameOver) return;
+
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function update() {
+      // Scroll background
+      bgX -= scrollSpeed;
+      if (bgX <= -WIDTH) {
+        bgX = 0;
+      }
+
+      // Cookie Physics
+      if ((keys.Space || keys.ArrowUp) && cookie.onGround) {
+        cookie.dy = -cookie.jumpForce;
+        cookie.onGround = false;
+      }
+      cookie.dy += cookie.gravity;
+      cookie.y += cookie.dy;
+      if (cookie.y + cookie.height >= HEIGHT) {
+        cookie.y = HEIGHT - cookie.height;
+        cookie.dy = 0;
+        cookie.onGround = true;
+      }
+
+      // Spawn Obstacles
+      obstacleTimer++;
+      if (obstacleTimer > obstacleDelay) {
+        createObstacle();
+        obstacleTimer = 0;
+      }
+      // Move Obstacles
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        obstacles[i].x -= obstacleSpeed;
+        if (obstacles[i].x + obstacles[i].width < 0) {
+          obstacles.splice(i, 1);
+        }
+      }
+
+      // Spawn Jellies
+      jellyTimer++;
+      if (jellyTimer > jellyDelay) {
+        createJelly();
+        jellyTimer = 0;
+      }
+      // Move Jellies
+      for (let i = jellies.length - 1; i >= 0; i--) {
+        jellies[i].x -= jellySpeed;
+        
+        // Check if Cookie collects the Jelly
+        if (isColliding(cookie, jellies[i])) {
+          score += 5;
+          jellies.splice(i, 1);
+          continue;
+        }
+        if (jellies[i].x + jellies[i].width < 0) {
+          jellies.splice(i, 1);
+        }
+      }
+
+      // Check Collisions (Cookie <-> Obstacles)
+      for (let i = 0; i < obstacles.length; i++) {
+        if (isColliding(cookie, obstacles[i])) {
+          endGame();
+          break;
+        }
+      }
+
+      // Update score display
+      scoreDisplay.textContent = score;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      // Draw Scrolling Background (twice, for wrap-around)
+      ctx.drawImage(bgImg, bgX, 0, WIDTH, HEIGHT);
+      ctx.drawImage(bgImg, bgX + WIDTH, 0, WIDTH, HEIGHT);
+
+      // Draw Cookie
+      ctx.drawImage(cookieImg, cookie.x, cookie.y, cookie.width, cookie.height);
+
+      // Draw Obstacles
+      for (let obs of obstacles) {
+        ctx.drawImage(obstacleImg, obs.x, obs.y, obs.width, obs.height);
+      }
+
+      // Draw Jellies
+      for (let jelly of jellies) {
+        ctx.drawImage(jellyImg, jelly.x, jelly.y, jelly.width, jelly.height);
+      }
+    }
+
+    // === Helper Functions ===
+    function createObstacle() {
+      // Example obstacle on the ground
+      obstacles.push({
+        x: WIDTH,
+        y: HEIGHT - 50,
+        width: 50,
+        height: 50
+      });
+    }
+
+    function createJelly() {
+      // Random vertical position for collectible
+      const randY = Math.random() * (HEIGHT - 100);
+      jellies.push({
+        x: WIDTH,
+        y: randY,
+        width: 30,
+        height: 30
+      });
+    }
+
+    function isColliding(a, b) {
+      return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.height + a.y > b.y
+      );
+    }
+
+    function endGame() {
+      gameOver = true;
+      finalScore.textContent = score;
+      gameOverScreen.classList.remove("hidden");
+    }
+
+    function resetGame() {
+      gameOver = false;
+      gameOverScreen.classList.add("hidden");
+      score = 0;
+      obstacleTimer = 0;
+      jellyTimer = 0;
+      obstacles = [];
+      jellies = [];
+      cookie.x = 100;
+      cookie.y = HEIGHT - cookie.height;
+      cookie.dy = 0;
+    }
+
+    // Start the game after images are loaded
+    window.onload = () => {
+      // If you want to ensure all images have loaded, you can nest your onload calls
+      // or just call the game loop if you're okay with placeholders.
+      resetGame();
+      gameLoop();
+    };
+  </script>
+
+</body>
+</html>

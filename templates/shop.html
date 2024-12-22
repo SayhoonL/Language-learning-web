@@ -6,7 +6,7 @@
     <title>Manage Items</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Comic Sans MS', 'Comic Sans', cursive;
             margin: 0;
             padding: 0;
             height: 100vh;
@@ -159,12 +159,20 @@
 
     <script>
         function sayHello() {
-            // Directly display the message
             const messageContainer = document.getElementById('message-container');
             const messageContent = document.getElementById('message-content');
+            const pointsContent = document.getElementById('points-content');
 
-            // Set the message content
-            messageContent.textContent = `Hello, welcome to the item store!`; // Static message
+            // Fetch and display the message with points
+            fetch('/get_user_info')
+                .then(response => response.json())
+                .then(data => {
+                    messageContent.textContent = `Hello, you have ${data.points} points!`;
+                })
+                .catch(error => {
+                    console.error('Error fetching user points:', error);
+                    messageContent.textContent = 'Hello, welcome to the item store!';
+                });
 
             // Show the container with animation
             messageContainer.classList.add('active');
@@ -174,25 +182,61 @@
                 messageContainer.classList.remove('active');
             }, 5000);
         }
+
         function fetchUserItems() {
             fetch('/get_user_items')
-                .then(response => response.json())
+                .then(response => {
+                    console.log('Response received:', response);
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.items) {
-                        const itemsDropdown = document.getElementById('items');
-                        itemsDropdown.innerHTML = ''; // Clear existing options
+                    console.log('Data received:', data);
+                    const itemsList = document.getElementById('items-list');
+                    if (!itemsList) {
+                        console.error('Element with ID "items-list" not found.');
+                        return;
+                    }
+                    itemsList.innerHTML = ''; // Clear existing items
 
+                    if (data.items && data.items.length > 0) {
+                        console.log('Items found:', data.items);
                         data.items.forEach(item => {
-                            const option = document.createElement('option');
-                            option.value = item.id;
-                            option.textContent = `${item.name} (x${item.quantity})`;
-                            itemsDropdown.appendChild(option);
+                            console.log('Processing item:', item);
+                            const itemEntry = document.createElement('li');
+
+                            // Create item image element
+                            const itemImage = document.createElement('img');
+                            itemImage.src = item.image_url;
+                            itemImage.alt = item.name;
+                            itemImage.className = 'item-image';
+
+                            // Create item info element
+                            const itemInfo = document.createElement('span');
+                            itemInfo.textContent = `${item.name}`;
+
+                            // Create delete button
+                            const deleteButton = document.createElement('button');
+                            deleteButton.textContent = 'Delete';
+                            deleteButton.className = 'delete-button';
+                            deleteButton.onclick = () => {
+                                console.log(`Delete button clicked for userItemID: ${item.userItemID}`);
+                                deleteItem(item.userItemID);
+                            };
+
+                            // Append elements to the list item
+                            itemEntry.appendChild(itemImage);
+                            itemEntry.appendChild(itemInfo);
+                            itemEntry.appendChild(deleteButton);
+
+                            // Add list item to the items list
+                            itemsList.appendChild(itemEntry);
                         });
                     } else {
-                        alert('No items available.');
+                        console.warn('No items found for the user.');
+                        itemsList.innerHTML = '<p>You don\'t have any items yet!</p>';
                     }
                 })
-                .catch(error => console.error('Error fetching user items:', error));
+                .catch(error => console.error('Error fetching items:', error));
         }
     
         function purchaseItem(itemID) {
@@ -205,6 +249,7 @@
                 .then(data => {
                     if (data.success) {
                         alert('Item purchased successfully!');
+                        fetchUserItems();
                     } else {
                         alert(data.message || 'Error purchasing item.');
                     }
@@ -214,6 +259,30 @@
                     alert('An error occurred while purchasing the item.');
                 });
         }
+
+        function deleteItem(userItemID) {
+            console.log(`Deleting item with userItemID: ${userItemID}`);
+            fetch('/delete_item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userItemID })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        console.log(data.message);
+                        alert(data.message); // Notify the user
+                    }
+                    if (data.success !== false) {
+                        fetchUserItems(); // Refresh the items list
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting item:', error);
+                    alert('An error occurred while deleting the item.');
+                });
+        }
+
     
         // Load shop items on page load
         window.onload = fetchUserItems();
