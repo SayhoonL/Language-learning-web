@@ -3,12 +3,24 @@ import sqlite3
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 import random
+import os
+from dotenv import load_dotenv
+import openai
+
+load_dotenv() 
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+print("OPENAI_API_KEY =>", openai.api_key)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Session timeout set to 30 minutes
 
 # Database setup
+
+OFFICIAL_DEFINITION = "The process by which green plants use sunlight to synthesize foods from carbon dioxide and water."
+WORD = "Photosynthesis"
+
 
 def init_db():
     """Initializes the database with the required tables and seed data."""
@@ -648,6 +660,84 @@ def delete_item():
         conn.close()
 
     return jsonify({'message': 'Item deleted successfully!', 'userItemID': user_item_id}), 200
+
+@app.route("/check-definition", methods=["POST"])
+def check_definition():
+    try:
+        data = request.get_json()
+        user_definition = data.get("userDefinition", "")
+
+        # Updated system instruction:
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a strict vocabulary teacher. "
+                    "I will provide: "
+                    "1) a word, "
+                    "2) its official definition, and "
+                    "3) the student's definition. "
+                    "You must decide if the student's definition matches "
+                    "the essential meaning of the official definition. "
+                    "Respond in the following format:\n\n"
+                    "Correctness: Yes or No\n"
+                    "Explanation: [brief explanation]\n\n"
+                    "Be concise."
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f'Word: "{WORD}"\n'
+                    f'Official Definition: "{OFFICIAL_DEFINITION}"\n'
+                    f'Student\'s Definition: "{user_definition}"'
+                )
+            }
+        ]
+
+        # Call OpenAI (using the old ChatCompletion or new Chat interface)
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=60,
+            temperature=0.0
+        )
+
+        response_text = response.choices[0]["message"]["content"].strip()
+        print("ChatGPT raw answer:", response_text)
+
+        # Parse the response
+        lines = response_text.splitlines()
+        correctness_line = None
+        explanation_line = None
+
+        for line in lines:
+            if line.lower().startswith("correctness:"):
+                correctness_line = line
+            elif line.lower().startswith("explanation:"):
+                explanation_line = line
+
+        is_correct = False
+        explanation = ""
+
+        if correctness_line:
+            # e.g. "Correctness: Yes" => "Yes"
+            correctness_value = correctness_line.split(":", 1)[1].strip()
+            is_correct = (correctness_value.lower() == "yes")
+
+        if explanation_line:
+            # e.g. "Explanation: The student left out carbon dioxide..."
+            explanation = explanation_line.split(":", 1)[1].strip()
+
+        return jsonify({
+            "correct": is_correct,
+            "modelAnswer": "Yes" if is_correct else "No",
+            "explanation": explanation
+        })
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": "Something went wrong"}), 500
 
 @app.route('/logout')
 def logout():

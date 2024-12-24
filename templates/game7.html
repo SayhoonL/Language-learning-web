@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Definition Checker</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 40px;
+    }
+    .result-correct {
+      color: green;
+    }
+    .result-incorrect {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Definition Checker</h1>
+  <p><strong>Word:</strong> Photosynthesis</p>
+  <p><strong>Official Definition:</strong> The process by which green plants use sunlight to synthesize foods from carbon dioxide and water.</p>
+
+  <label for="userDef">Your Definition:</label><br>
+  <textarea id="userDef" rows="5" cols="50"></textarea><br><br>
+  <button id="submitBtn">Check Definition</button>
+
+  <div id="result"></div>
+
+  <script>
+    const submitBtn = document.getElementById('submitBtn');
+    const resultDiv = document.getElementById('result');
+
+    submitBtn.addEventListener('click', async () => {
+      const userDefinition = document.getElementById('userDef').value;
+      resultDiv.textContent = "Checking…";
+
+      try {
+        const response = await fetch('/check-definition', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userDefinition })
+        });
+
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+
+        // Expecting JSON like:
+        // {
+        //   "correct": true/false,
+        //   "modelAnswer": "Yes" or "No",
+        //   "explanation": "A short reason..."
+        // }
+        const data = await response.json();
+
+        if (data.correct) {
+          resultDiv.innerHTML = `
+            <p class="result-correct">
+              Correct! (ChatGPT says: ${data.modelAnswer})
+            </p>
+            <p>
+              <strong>Explanation:</strong> ${data.explanation || 'No explanation provided.'}
+            </p>
+          `;
+        } else {
+          resultDiv.innerHTML = `
+            <p class="result-incorrect">
+              Incorrect. (ChatGPT says: ${data.modelAnswer})
+            </p>
+            <p>
+              <strong>Explanation:</strong> ${data.explanation || 'No explanation provided.'}
+            </p>
+          `;
+        }
+      } catch (err) {
+        console.error(err);
+        resultDiv.textContent = "Error checking definition.";
+      }
+    });
+  </script>
+</body>
+</html>
