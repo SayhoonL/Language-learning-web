@@ -236,6 +236,13 @@ def game(game_id):
         return redirect(url_for('login'))
     return render_template(f'game{game_id}.html')
 
+@app.route('/map')
+def map():
+    """Renders the main games page that includes all games."""
+    if not is_logged_in():
+        return redirect(url_for('login'))
+    return render_template('map.html')
+
 @app.route('/pet')
 def pet():
     """Renders the pet details page."""
