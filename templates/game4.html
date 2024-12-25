@@ -69,16 +69,16 @@
 
         const player = {
             x: canvas.width / 2 - 20,
-            y: canvas.height - 120, // Move the player higher to avoid distracting controls
+            y: canvas.height - 120,
             width: 40,
             height: 40,
             color: 'blue',
-            speed: 10
+            speed: 500 // Speed in pixels per second
         };
 
         const fallingObjects = [];
         const objectSize = 30;
-        let objectSpeed = 4; // Start speed of falling objects
+        let objectSpeed = 200; // Speed in pixels per second
         let score = 0;
         let scoreUpdateInterval = 20;
         let frameCount = 0;
@@ -110,10 +110,10 @@
             }
         }
 
-        function moveObjects() {
+        function moveObjects(dt) {
             for (const obj of fallingObjects) {
                 if (obj.delay <= 0) { // Move only when delay has passed
-                    obj.y += objectSpeed;
+                    obj.y += objectSpeed * dt;
                 }
             }
         }
@@ -140,7 +140,7 @@
             if (frameCount % scoreUpdateInterval === 0 && gameRunning) {
                 score++;
                 if (score % 10 === 0) { // Increase speed every 10 points
-                    objectSpeed += 0.5;
+                    objectSpeed += 10;
                 }
                 if (score % 50 === 0) { // Change background color every 50 points
                     const colorIndex = Math.floor(score / 50) % backgroundColors.length;
@@ -152,13 +152,18 @@
             ctx.fillText(`Score: ${score}`, 10, 30);
         }
 
-        function gameLoop() {
+        let lastTime = 0;
+
+        function gameLoop(currentTime) {
             if (gameRunning) {
+                const dt = (currentTime - lastTime) / 1000; // Time elapsed in seconds
+                lastTime = currentTime;
+
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
                 drawPlayer();
                 drawObjects();
-                moveObjects();
+                moveObjects(dt);
                 checkCollision();
                 updateScore();
 
@@ -172,15 +177,16 @@
             score = 0;
             frameCount = 0;
             fallingObjects.length = 0;
-            objectSpeed = 4; // Reset speed
+            objectSpeed = 200; // Reset speed
             document.body.style.backgroundColor = backgroundColors[0]; // Reset background color
 
             document.getElementById('controls').style.display = 'block';
             document.getElementById('startGame').style.display = 'none';
             document.getElementById('endGame').style.display = 'inline-block';
 
+            lastTime = performance.now();
             setInterval(createObject, 1000);
-            gameLoop();
+            requestAnimationFrame(gameLoop);
         }
 
         function endGame() {
@@ -192,21 +198,21 @@
 
         document.addEventListener('keydown', (event) => {
             if (event.key === 'ArrowLeft' && player.x > 0) {
-                player.x -= player.speed;
+                player.x -= player.speed / 60; // Divide speed for frame independence
             } else if (event.key === 'ArrowRight' && player.x < canvas.width - player.width) {
-                player.x += player.speed;
+                player.x += player.speed / 60;
             }
         });
 
         document.getElementById('moveLeft').addEventListener('click', () => {
             if (player.x > 0) {
-                player.x -= player.speed;
+                player.x -= player.speed / 60;
             }
         });
 
         document.getElementById('moveRight').addEventListener('click', () => {
             if (player.x < canvas.width - player.width) {
-                player.x += player.speed;
+                player.x += player.speed / 60;
             }
         });
 

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Map</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background: rgb(75, 74, 74) url('/static/uploads/map-background.png') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            position: relative;
+        }
+        .map-container, .level-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            justify-content: center;
+        }
+        .pet-card {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 10px;
+            width: 150px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+        .pet-card img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+        }
+        .pet-card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+        }
+        .level-button {
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 10px;
+            width: 100px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+        .level-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+        }
+        #selected-pet {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            display: block; /* Ensure it's always visible */
+            max-width: 200px;
+        }
+        #selected-pet img {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+        }
+        .pet-selection-button {
+            position: fixed;
+            bottom: 120px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="page-title" style="text-align: center;">Pet Selection</h1>
+
+    <!-- Pet Selection Section -->
+    <div id="pet-selection-container" class="map-container">
+        <!-- Pet cards will be dynamically rendered here -->
+    </div>
+
+    <!-- Level Selection Section -->
+    <div id="level-container" class="level-container" style="display: none;">
+        <!-- Level buttons will be dynamically rendered here -->
+    </div>
+
+    <!-- Display Selected Pet at the Bottom Right (only for Map section) -->
+    <div id="selected-pet">
+        <img id="selected-pet-img" src="" alt="Selected Pet" />
+        <p id="selected-pet-name"></p>
+    </div>
+
+    <!-- Pet Selection Button -->
+    <div id="pet-selection-button" class="pet-selection-button" onclick="showPetSelection();">
+        Select Your Pet
+    </div>
+
+    <script>
+        // Function to fetch pets from the backend and render them on the map
+        function fetchPetsForMap() {
+            fetch('/get_user_pets') // Replace with your actual endpoint
+                .then(response => response.json())
+                .then(data => {
+                    const petSelectionContainer = document.getElementById('pet-selection-container');
+                    petSelectionContainer.innerHTML = ''; // Clear any existing content
+
+                    if (data.pets && data.pets.length > 0) {
+                        data.pets.forEach(pet => {
+                            // Create a card for each pet
+                            const petCard = document.createElement('div');
+                            petCard.className = 'pet-card';
+
+                            // Add an image for the pet
+                            const petImage = document.createElement('img');
+                            petImage.src = pet.image_url;
+                            petImage.alt = pet.name;
+
+                            // Add the pet's name
+                            const petName = document.createElement('p');
+                            petName.textContent = pet.name;
+
+                            // Add a click event to select the pet
+                            petCard.onclick = () => {
+                                alert(`You selected ${pet.name}!`);
+                                saveSelectedPet(pet); // Save the selected pet for later use
+                                showLevels(); // Show levels after pet selection
+                                updatePageTitle("Map"); // Change the title to "Map"
+                            };
+
+                            // Append elements to the pet card
+                            petCard.appendChild(petImage);
+                            petCard.appendChild(petName);
+
+                            // Append the pet card to the selection container
+                            petSelectionContainer.appendChild(petCard);
+                        });
+                    } else {
+                        petSelectionContainer.innerHTML = '<p>No pets available to display.</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching pets:', error);
+                    document.getElementById('pet-selection-container').textContent = 'Failed to load pets.';
+                });
+        }
+
+        // Function to save selected pet in localStorage
+        function saveSelectedPet(pet) {
+            localStorage.setItem('selectedPet', JSON.stringify(pet)); // Save the pet's info
+            displaySelectedPet(pet); // Display the selected pet at the bottom right
+        }
+
+        // Function to display the selected pet at the bottom right
+        function displaySelectedPet(pet) {
+            const selectedPetContainer = document.getElementById('selected-pet');
+            const selectedPetImg = document.getElementById('selected-pet-img');
+            const selectedPetName = document.getElementById('selected-pet-name');
+
+            // Set the selected pet's image and name
+            selectedPetImg.src = pet.image_url;
+            selectedPetName.textContent = pet.name;
+
+            // Show the selected pet section
+            selectedPetContainer.style.display = 'block';
+        }
+
+        // Function to show levels after pet is selected
+        function showLevels() {
+            // Hide pet selection
+            document.getElementById('pet-selection-container').style.display = 'none';
+
+            // Show level options
+            document.getElementById('level-container').style.display = 'flex';
+
+            // Dynamically create level buttons
+            const levels = ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5'];
+            const levelContainer = document.getElementById('level-container');
+            levelContainer.innerHTML = ''; // Clear any existing content
+
+            levels.forEach(level => {
+                const levelButton = document.createElement('div');
+                levelButton.className = 'level-button';
+                levelButton.textContent = level;
+                
+                // Add the onclick function to redirect to map page based on the selected pet ID
+                levelButton.onclick = () => {
+                    const selectedPet = JSON.parse(localStorage.getItem('selectedPet'));  // Get the stored pet
+                    if (selectedPet) {
+                        // Correct the URL redirection based on selected pet ID
+                        window.location.href = `/map1?id=${selectedPet.id}`; // Use the selected pet's ID
+                    } else {
+                        alert("Please select a pet first!");  // If no pet is selected
+                    }
+                };
+
+                levelContainer.appendChild(levelButton);
+            });
+        }
+
+        // Function to update the page title dynamically
+        function updatePageTitle(title) {
+            document.getElementById('page-title').textContent = title;
+        }
+
+        // Fetch and display pets when the page loads
+        window.onload = function() {
+            fetchPetsForMap();
+            
+            const selectedPet = JSON.parse(localStorage.getItem('selectedPet'));
+            if (selectedPet) {
+                displaySelectedPet(selectedPet); // If a pet is stored, display it immediately
+                updatePageTitle("Map"); // Change title to "Map" if pet is already selected
+                showLevels(); // Show levels if pet is selected
+            }
+        };
+
+        // Show pet selection when the user clicks the "Select Your Pet" button
+        function showPetSelection() {
+            document.getElementById('pet-selection-container').style.display = 'flex'; // Show pet selection
+            document.getElementById('level-container').style.display = 'none'; // Hide levels
+            updatePageTitle("Pet Selection"); // Change title back to "Pet Selection"
+        }
+    </script>
+</body>
+</html>
