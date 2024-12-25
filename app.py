@@ -243,6 +243,13 @@ def map():
         return redirect(url_for('login'))
     return render_template('map.html')
 
+@app.route('/map<int:map_id>')
+def map_by_id(map_id):
+    """Handles routing for individual maps."""
+    if not is_logged_in():
+        return redirect(url_for('login'))
+    return render_template(f'map{map_id}.html')
+
 @app.route('/pet')
 def pet():
     """Renders the pet details page."""

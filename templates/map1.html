@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pet Info</title>
+    <style>
+        /* General Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: url('/static/uploads/grass.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            position: fixed;
+            bottom: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        #petImage, #dragon {
+            width: 20vw;
+            max-width: 200px;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .button {
+            margin: 10px;
+            padding: 10px 5%;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        .button:hover {
+            background-color: #0056b3;
+        }
+
+        #attackAnimationContainer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #attackImage {
+            position: absolute;
+            bottom: 30%;
+            left: 30%;
+            width: 10vw;
+            max-width: 100px;
+            height: auto;
+            display: none;
+            transition: transform 1s ease-in-out;
+        }
+
+        .animate-attack {
+            display: block;
+            transform: translate(50vw, -20vh); /* Adjust for relative movement */
+        }
+
+        .health-bar {
+            position: relative;
+            width: 90%;
+            max-width: 200px;
+            height: 20px;
+            background-color: #444;
+            border: 2px solid #000;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .health-bar-inner {
+            height: 100%;
+            background-color: #4caf50;
+            border-radius: 3px;
+            transition: width 0.5s ease-in-out;
+        }
+
+        #dragonContainer, #petImageContainer {
+            position: absolute;
+            width: 20vw;
+            max-width: 200px;
+        }
+
+        #dragonContainer {
+            top: 10%;
+            right: 5%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        #petImageContainer {
+            top: 50%;
+            left: 25%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 95%;
+            }
+
+            #petImage, #dragon {
+                width: 25vw;
+            }
+
+            #attackImage {
+                width: 15vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="dragonContainer">
+        <div class="health-bar">
+            <div id="dragonHealth" class="health-bar-inner" style="width: 100%;"></div>
+        </div>
+        <img id="dragon" src="/static/uploads/dragon.png" alt="Dragon" />
+    </div>
+    
+    <div id="petImageContainer">
+        <div class="health-bar">
+            <div id="petHealth" class="health-bar-inner" style="width: 100%;"></div>
+        </div>
+        <img id="petImage" alt="Pet Image" />
+    </div>
+
+    <div id="attackAnimationContainer">
+        <img id="attackImage" src="/static/uploads/attack.png" alt="Attack Animation" />
+    </div>
+
+    <div class="container" id="contentContainer">
+        <h2 id="petName">Pet Name</h2>
+        <p>Level: <span id="petLevel">Loading...</span></p>
+        <p>Experience Points: <span id="petExp">Loading...</span></p>
+
+        <div>
+            <button class="button" onclick="startAttack()">Attack</button>
+            <button class="button" onclick="showItemList()">Item</button>
+        </div>
+    </div>
+<script>
+    let = dragonHealth = 100;
+    let petHealth = 100;
+    const petId = new URLSearchParams(window.location.search).get('id'); // Get pet ID from URL
+
+    // Fetch pet details
+    function fetchPetDetails() {
+        fetch(`/get_pet_details?id=${petId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.pet) {
+                    document.getElementById('petImage').src = data.pet.image_url;
+                    document.getElementById('petName').textContent = data.pet.name;
+                    document.getElementById('petLevel').textContent = data.pet.level;
+                    document.getElementById('petExp').textContent = data.pet.exp;
+                } else {
+                    alert('Error loading pet details.');
+                }
+            })
+            .catch(error => console.error('Error fetching pet details:', error));
+    }
+
+    // Show item list
+    function showItemList() {
+        const container = document.getElementById('contentContainer');
+        container.innerHTML = `
+            <h3>Available Items</h3>
+            <ul id="items"></ul>
+            <button class="button" onclick="showDefaultView()">Back</button>
+        `;
+        fetch('/get_user_items')
+            .then(response => response.json())
+            .then(data => {
+                const itemsList = document.getElementById('items');
+                if (data.items && data.items.length > 0) {
+                    data.items.forEach(item => {
+                        const li = document.createElement('li');
+                        li.textContent = `${item.name} (x${item.quantity})`;
+                        itemsList.appendChild(li);
+                    });
+                } else {
+                    itemsList.innerHTML = '<li>No items available.</li>';
+                }
+            });
+    }
+
+    function updateHealth(target, damage) {
+        if (target === 'dragon') {
+            dragonHealth = Math.max(0, dragonHealth - damage); // Reduce dragon's health
+            document.getElementById('dragonHealth').style.width = `${dragonHealth}%`;
+
+            if (dragonHealth === 0) {
+                alert('Dragon defeated!');
+                setTimeout(() => {
+                    document.getElementById('dragon').style.visibility = 'hidden'; // Hide the dragon after 3 seconds
+                }, 100); // 3000ms = 3 seconds
+                }
+        } else if (target === 'pet') {
+            petHealth = Math.max(0, petHealth - damage); // Reduce pet's health
+            document.getElementById('petHealth').style.width = `${petHealth}%`;
+
+            if (petHealth === 0) {
+                alert('Your pet has been defeated!');
+                document.getElementById('petImage').style.visibility = 'hidden'; // Hide the pet
+            }
+        }
+    }
+
+    // Start attack with vocab challenge
+    function startAttack() {
+        fetch('/get-random-word')
+            .then(response => response.json())
+            .then(data => {
+                if (data.word && data.official_definition) {
+                    displayAttackChallenge(data.word, data.official_definition);
+                } else {
+                    alert('Failed to fetch a word for the challenge.');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching random word:', error);
+                alert('Something went wrong. Please try again.');
+            });
+    }
+
+    // Display the attack challenge
+    function displayAttackChallenge(word, definition) {
+        const container = document.getElementById('contentContainer');
+        container.innerHTML = `
+            <h3>Attack Challenge</h3>
+            <p>${definition}</p>
+            <input type="text" id="vocabInput" placeholder="Enter the correct word" style="padding: 10px; border-radius: 5px; border: 1px solid #ccc; width: 80%;" />
+            <button class="button" onclick="checkAnswer('${word}')">Submit</button>
+            <button class="button" onclick="showDefaultView()">Back</button>
+        `;
+    }
+
+    // Show the default view
+    function showDefaultView() {
+        const container = document.getElementById('contentContainer');
+        container.innerHTML = `
+            <h2 id="petName">Pet Name</h2>
+            <p>Level: <span id="petLevel">Loading...</span></p>
+            <p>Experience Points: <span id="petExp">Loading...</span></p>
+            <div>
+                <button class="button" onclick="startAttack()">Attack</button>
+                <button class="button" onclick="showItemList()">Item</button>
+            </div>
+        `;
+        fetchPetDetails(); // Reload pet details
+    }
+
+    function handleAttackSuccess() {
+        const attackImage = document.getElementById('attackImage');
+
+        updateHealth('dragon', 50);
+        // Reset animation state
+        attackImage.style.transform = 'translate(0, 0)';
+        attackImage.style.display = 'block'; // Show the image
+
+        // Start animation to target location
+        setTimeout(() => {
+            attackImage.style.transform = 'translate(1500px, -400px)'; // Move to (400px, 300px)
+        }, 10);
+
+        // Hide image after animation completes
+        setTimeout(() => {
+            attackImage.style.display = 'none';
+        }, 2100); // Animation duration (2s) + small buffer
+    }
+
+    // Trigger the animation on successful attack
+    function checkAnswer(correctWord) {
+        const userAnswer = document.getElementById('vocabInput').value.trim().toLowerCase();
+        if (userAnswer === correctWord.toLowerCase()) {
+            alert("Correct! Attack successful!");
+            handleAttackSuccess(); // Trigger animation
+            showDefaultView();
+        } else {
+            alert(`Incorrect! The correct word was "${correctWord}".`);
+            showDefaultView();
+        }
+    }
+
+    // Load pet details on page load
+    window.onload = function () {
+        fetchPetDetails();
+    };
+</script>
+
