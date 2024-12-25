@@ -10,16 +10,12 @@ import openai
 load_dotenv() 
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-print("OPENAI_API_KEY =>", openai.api_key)
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # Session timeout set to 30 minutes
 
-# Database setup
 
-OFFICIAL_DEFINITION = "The process by which green plants use sunlight to synthesize foods from carbon dioxide and water."
-WORD = "Photosynthesis"
 
 
 def init_db():
@@ -103,6 +99,39 @@ def init_db():
         (4, 'Rare Candy', 'Instantly levels up a pet', '/static/uploads/item4.png', 50),
         (5, 'Berry', 'Slightly increases a pet\'\'s experience', '/static/uploads/item5.png', 5)
     ''')
+
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS Words (
+            word TEXT PRIMARY KEY,
+            official_definition TEXT NOT NULL
+        )
+    ''')
+
+    words_list = [
+        ("Photosynthesis", 
+         "The process by which green plants use sunlight to synthesize foods from carbon dioxide and water."),
+
+        ("Osmosis", 
+         "The spontaneous passage or diffusion of water or other solvents through a semipermeable membrane."),
+
+        ("Metamorphosis", 
+         "A biological process by which an animal physically develops after birth or hatching, involving a conspicuous change in form or structure."),
+
+        ("Equinox", 
+         "The time or date at which the sun crosses the celestial equator, when day and night are of equal length."),
+
+        ("Quasar", 
+         "A massive and extremely remote celestial object, emitting exceptionally large amounts of energy, and typically having a starlike image in a telescope.")
+    ]
+
+    for (word, definition) in words_list:
+        try:
+            c.execute('''
+                INSERT INTO Words (word, official_definition)
+                VALUES (?, ?)
+            ''', (word, definition))
+        except sqlite3.IntegrityError:
+            print(f"'{word}' already exists, skipping insert.")
 
 
     conn.commit()
@@ -665,7 +694,9 @@ def delete_item():
 def check_definition():
     try:
         data = request.get_json()
-        user_definition = data.get("userDefinition", "")
+        word = data.get("word", "").strip()
+        official_definition = data.get("officialDefinition", "").strip()
+        user_definition = data.get("userDefinition", "").strip()
 
         # Updated system instruction:
         messages = [
@@ -679,17 +710,18 @@ def check_definition():
                     "3) the student's definition. "
                     "You must decide if the student's definition matches "
                     "the essential meaning of the official definition. "
+                    "does not have to be 100 percent correct"
                     "Respond in the following format:\n\n"
-                    "Correctness: Yes or No\n"
-                    "Explanation: [brief explanation]\n\n"
-                    "Be concise."
+                    "Correctness: [Yes or No]\n"
+                    "Explanation: [Explain why, and include the correct definition in your explanation.]\n\n"
+                    "Be concise, but always include the correct definition in your explanation."
                 )
             },
             {
                 "role": "user",
                 "content": (
-                    f'Word: "{WORD}"\n'
-                    f'Official Definition: "{OFFICIAL_DEFINITION}"\n'
+                    f'Word: "{word}"\n'
+                    f'Official Definition: "{official_definition}"\n'
                     f'Student\'s Definition: "{user_definition}"'
                 )
             }
@@ -697,7 +729,7 @@ def check_definition():
 
         # Call OpenAI (using the old ChatCompletion or new Chat interface)
         response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages,
             max_tokens=60,
             temperature=0.0
@@ -738,6 +770,32 @@ def check_definition():
     except Exception as e:
         print("Error:", e)
         return jsonify({"error": "Something went wrong"}), 500
+
+@app.route("/get-random-word", methods=["GET"])
+def get_random_word():
+    """Returns a random word and its official definition from the Words table."""
+    try:
+        conn = sqlite3.connect('pets_database.db')
+        c = conn.cursor()
+        
+        # Grab 1 random row
+        c.execute("SELECT word, official_definition FROM Words ORDER BY RANDOM() LIMIT 1")
+        row = c.fetchone()
+        conn.close()
+
+        if row:
+            # row is a tuple (word, official_definition)
+            return jsonify({
+                "word": row[0],
+                "official_definition": row[1]
+            }), 200
+        else:
+            return jsonify({"error": "No words found in the database."}), 404
+
+    except Exception as e:
+        print("Error:", e)
+        return jsonify({"error": "Something went wrong"}), 500
+
 
 @app.route('/logout')
 def logout():

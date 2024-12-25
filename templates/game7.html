@@ -17,60 +17,110 @@
   </style>
 </head>
 <body>
-  <h1>Definition Checker</h1>
-  <p><strong>Word:</strong> Photosynthesis</p>
-  <p><strong>Official Definition:</strong> The process by which green plants use sunlight to synthesize foods from carbon dioxide and water.</p>
+  <h1>Random Word Definition Checker</h1>
+  
+  <!-- Where the random word will appear -->
+  <p>
+    <strong>Word:</strong> <span id="randomWord">Loading...</span>
+  </p>
 
   <label for="userDef">Your Definition:</label><br>
   <textarea id="userDef" rows="5" cols="50"></textarea><br><br>
-  <button id="submitBtn">Check Definition</button>
+
+  <button id="checkBtn">Check Definition</button>
+  <button id="newWordBtn">Get New Random Word</button>
 
   <div id="result"></div>
 
   <script>
-    const submitBtn = document.getElementById('submitBtn');
-    const resultDiv = document.getElementById('result');
+    let currentWord = "";
+    let currentOfficialDefinition = "";
 
-    submitBtn.addEventListener('click', async () => {
-      const userDefinition = document.getElementById('userDef').value;
+    const randomWordEl = document.getElementById('randomWord');
+    const userDefEl = document.getElementById('userDef');
+    const resultDiv = document.getElementById('result');
+    const checkBtn = document.getElementById('checkBtn');
+    const newWordBtn = document.getElementById('newWordBtn');
+
+    // 1. Fetch a random word from the server
+    async function fetchRandomWord() {
+      try {
+        const response = await fetch('/get-random-word');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+
+        const data = await response.json();
+        if (data.error) {
+          randomWordEl.textContent = data.error;
+        } else {
+          currentWord = data.word;
+          currentOfficialDefinition = data.official_definition;
+          randomWordEl.textContent = currentWord;
+          userDefEl.value = "";
+          resultDiv.textContent = "";
+        }
+      } catch (err) {
+        console.error(err);
+        randomWordEl.textContent = "Error fetching random word.";
+      }
+    }
+
+    // Load one random word on page load
+    fetchRandomWord();
+
+    // 2. Check the user’s definition
+    checkBtn.addEventListener('click', async () => {
+      const userDefinition = userDefEl.value.trim();
+      if (!currentWord) {
+        resultDiv.textContent = "No word selected. Please get a random word first.";
+        return;
+      }
+      if (!userDefinition) {
+        resultDiv.textContent = "Please enter your definition.";
+        return;
+      }
+
       resultDiv.textContent = "Checking…";
 
       try {
+        // Send the user’s definition plus the random word to /check-definition
         const response = await fetch('/check-definition', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userDefinition })
+          body: JSON.stringify({
+            word: currentWord,
+            officialDefinition: currentOfficialDefinition,
+            userDefinition: userDefinition
+          })
         });
 
         if (!response.ok) {
           throw new Error("Network response was not ok");
         }
-
-        // Expecting JSON like:
-        // {
-        //   "correct": true/false,
-        //   "modelAnswer": "Yes" or "No",
-        //   "explanation": "A short reason..."
-        // }
+        
         const data = await response.json();
+        if (data.error) {
+          resultDiv.textContent = "Error: " + data.error;
+          return;
+        }
 
+        // data.correct => true/false
+        // data.modelAnswer => "Yes" or "No"
+        // data.explanation => string with ChatGPT's explanation (including correct definition)
         if (data.correct) {
           resultDiv.innerHTML = `
             <p class="result-correct">
               Correct! (ChatGPT says: ${data.modelAnswer})
             </p>
-            <p>
-              <strong>Explanation:</strong> ${data.explanation || 'No explanation provided.'}
-            </p>
+            <p><strong>Explanation:</strong> ${data.explanation}</p>
           `;
         } else {
           resultDiv.innerHTML = `
             <p class="result-incorrect">
               Incorrect. (ChatGPT says: ${data.modelAnswer})
             </p>
-            <p>
-              <strong>Explanation:</strong> ${data.explanation || 'No explanation provided.'}
-            </p>
+            <p><strong>Explanation:</strong> ${data.explanation}</p>
           `;
         }
       } catch (err) {
@@ -78,6 +128,9 @@
         resultDiv.textContent = "Error checking definition.";
       }
     });
+
+    // 3. Get a new random word when user clicks "Get New Random Word"
+    newWordBtn.addEventListener('click', fetchRandomWord);
   </script>
 </body>
 </html>
