@@ -76,7 +76,7 @@
             max-width: 100px;
             height: auto;
             display: none;
-            transition: transform 1s ease-in-out;
+            transition: transform 0.5s ease-in-out;
         }
 
         .animate-attack {
@@ -158,6 +158,11 @@
         <img id="attackImage" src="/static/uploads/attack.png" alt="Attack Animation" />
     </div>
 
+    <img id="dragonAttackImage" 
+     src="/static/uploads/attack2.PNG" 
+     alt="Dragon Attack Animation" 
+     style="display: none; position: absolute; width: 10vw; max-width: 100px; height: auto; transition: transform 0.5s ease-in-out; top: 100px; right: 200px;" />
+
     <div class="container" id="contentContainer">
         <h2 id="petName">Pet Name</h2>
         <p>Level: <span id="petLevel">Loading...</span></p>
@@ -220,18 +225,16 @@
             document.getElementById('dragonHealth').style.width = `${dragonHealth}%`;
 
             if (dragonHealth === 0) {
-                alert('Dragon defeated!');
-                setTimeout(() => {
-                    document.getElementById('dragon').style.visibility = 'hidden'; // Hide the dragon after 3 seconds
-                }, 100); // 3000ms = 3 seconds
+                document.getElementById('dragon').style.visibility = 'hidden'; // Hide the dragon
+                showPopupMessage('You Win! The dragon is defeated.');
                 }
         } else if (target === 'pet') {
             petHealth = Math.max(0, petHealth - damage); // Reduce pet's health
             document.getElementById('petHealth').style.width = `${petHealth}%`;
 
             if (petHealth === 0) {
-                alert('Your pet has been defeated!');
                 document.getElementById('petImage').style.visibility = 'hidden'; // Hide the pet
+                showPopupMessage('You Lose! Your pet has been defeated.');
             }
         }
     }
@@ -290,27 +293,93 @@
 
         // Start animation to target location
         setTimeout(() => {
-            attackImage.style.transform = 'translate(1500px, -400px)'; // Move to (400px, 300px)
+            attackImage.style.transform = 'translate(55vw, -45vh)'; // Move to (400px, 300px)
         }, 10);
 
         // Hide image after animation completes
         setTimeout(() => {
             attackImage.style.display = 'none';
-        }, 2100); // Animation duration (2s) + small buffer
+        }, 500); // Animation duration (2s) + small buffer
+    }
+
+    function handleDragonAttack() {
+        const attackImage = document.getElementById('dragonAttackImage'); // Use the new dragon attack image
+
+        // Reduce pet's health
+        updateHealth('pet', 20); // Adjust damage value as needed
+
+        // Reset attack animation state
+        attackImage.style.transform = 'translate(0, 0)';
+        attackImage.style.display = 'block'; // Show the attack image
+
+        // Start attack animation towards the pet
+        setTimeout(() => {
+            attackImage.style.transform = 'translate(-55vw, 45vh)'; // Adjust coordinates to match the pet's location
+        }, 10);
+
+        // Hide attack image after animation completes
+        setTimeout(() => {
+            attackImage.style.display = 'none';
+        }, 500); // Duration of the animation + buffer
     }
 
     // Trigger the animation on successful attack
     function checkAnswer(correctWord) {
         const userAnswer = document.getElementById('vocabInput').value.trim().toLowerCase();
         if (userAnswer === correctWord.toLowerCase()) {
-            alert("Correct! Attack successful!");
-            handleAttackSuccess(); // Trigger animation
+            handleAttackSuccess(); // Player attacks dragon on correct answer
             showDefaultView();
         } else {
-            alert(`Incorrect! The correct word was "${correctWord}".`);
+            handleDragonAttack(); // Dragon attacks pet on wrong answer
             showDefaultView();
         }
     }
+
+    function showPopupMessage(message) {
+        // Create the overlay
+        const popupOverlay = document.createElement('div');
+        popupOverlay.style.position = 'fixed';
+        popupOverlay.style.top = '0';
+        popupOverlay.style.left = '0';
+        popupOverlay.style.width = '100vw';
+        popupOverlay.style.height = '100vh';
+        popupOverlay.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        popupOverlay.style.display = 'flex';
+        popupOverlay.style.flexDirection = 'column';
+        popupOverlay.style.justifyContent = 'center';
+        popupOverlay.style.alignItems = 'center';
+        popupOverlay.style.color = 'white';
+        popupOverlay.style.fontSize = '2rem';
+        popupOverlay.style.zIndex = '1000';
+        
+        // Add the message
+        const messageText = document.createElement('p');
+        messageText.textContent = message;
+        popupOverlay.appendChild(messageText);
+
+        // Add a "Back to Map" button
+        const backButton = document.createElement('button');
+        backButton.textContent = 'Back to Map';
+        backButton.style.marginTop = '20px';
+        backButton.style.padding = '10px 20px';
+        backButton.style.fontSize = '1rem';
+        backButton.style.border = 'none';
+        backButton.style.borderRadius = '5px';
+        backButton.style.backgroundColor = '#007BFF';
+        backButton.style.color = 'white';
+        backButton.style.cursor = 'pointer';
+
+        backButton.addEventListener('click', () => {
+            window.location.href = '/map'; // Navigate to the /map page
+        });
+
+        popupOverlay.appendChild(backButton);
+
+        // Append the overlay to the body
+        document.body.appendChild(popupOverlay);
+    }
+
+
 
     // Load pet details on page load
     window.onload = function () {
